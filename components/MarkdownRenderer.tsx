@@ -8,13 +8,15 @@ import { Info, Lightbulb, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 
 interface Props {
   content: string;
+  className?: string;
 }
 
-// Separate plugins to reuse in the recursive render
+// Separate plugins
 const remarkPlugins = [remarkMath, remarkGfm];
 const rehypePlugins = [rehypeRaw, [rehypeKatex, { strict: false, throwOnError: false }]];
 
-// Collapsible Analysis Component
+// --- Sub-components ---
+
 const AnalysisPanel = ({ content }: { content: string }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -56,127 +58,131 @@ const AnalysisPanel = ({ content }: { content: string }) => {
         </div>
       </div>
       <div className="p-4 md:p-5 bg-white/40">
-        {/* We use a new instance of MarkdownRenderer (essentially) to render the inner content */}
-        <ReactMarkdown
-          remarkPlugins={remarkPlugins as any}
-          rehypePlugins={rehypePlugins as any}
-          components={{
-             // Simplified components for inner content to prevent deep nesting issues, 
-             // but keeping math and basic formatting
-             h1: ({node, ...props}) => <h4 className="font-bold my-2 text-gray-900" {...props} />,
-             h2: ({node, ...props}) => <h5 className="font-bold my-2 text-gray-900" {...props} />,
-             p: ({node, ...props}) => <p className="mb-2 last:mb-0 text-gray-700 leading-7 text-sm" {...props} />,
-             strong: ({node, ...props}) => <strong className="font-bold text-amber-800 bg-amber-100/50 px-1 rounded" {...props} />,
-             ul: ({node, ...props}) => <ul className="list-disc list-outside ml-4 my-2 space-y-1 text-gray-700 text-sm" {...props} />,
-             ol: ({node, ...props}) => <ol className="list-decimal list-outside ml-4 my-2 space-y-1 text-gray-700 text-sm" {...props} />,
-             table: ({node, ...props}) => (
-                <div className="overflow-x-auto my-2 rounded border border-gray-200">
-                  <table className="min-w-full divide-y divide-gray-200 text-xs" {...props} />
-                </div>
-              ),
-              th: ({node, ...props}) => <th className="px-2 py-1 text-left font-semibold text-gray-600 bg-gray-50" {...props} />,
-              td: ({node, ...props}) => <td className="px-2 py-1 text-gray-700 border-t border-gray-100" {...props} />,
-          }}
-        >
-          {content}
-        </ReactMarkdown>
+        <MarkdownRenderer content={content} />
       </div>
     </div>
   );
 };
 
-const MarkdownRenderer: React.FC<Props> = ({ content }) => {
+const SvgBlock = ({ content }: { content: string }) => {
+  const titleMatch = content.match(/<title.*?>(.*?)<\/title>/i);
+  const description = titleMatch ? titleMatch[1] : 'AI 生成的图形推理演示';
+  
+  let cleanSvg = content.replace(/^svg/i, '').trim();
+  
+  if (!cleanSvg.startsWith('<svg') && cleanSvg.includes('<path')) {
+     cleanSvg = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" stroke="black" fill="none">${cleanSvg}</svg>`;
+  }
+
   return (
-    <div className="prose prose-blue prose-sm max-w-none dark:prose-invert leading-relaxed text-gray-800">
+    <div className="relative group my-4 rounded-xl overflow-hidden border-2 border-dashed border-gray-200 bg-white">
+      <div 
+        className="p-4 flex justify-center items-center shadow-sm"
+        dangerouslySetInnerHTML={{ __html: cleanSvg }}
+      />
+      <div className="absolute top-2 right-2 transition-opacity duration-200">
+         <div className="group/tooltip relative">
+            <div className="bg-blue-50/80 backdrop-blur-sm text-blue-600 p-1.5 rounded-full cursor-help hover:bg-blue-100 border border-blue-100 shadow-sm">
+               <Info size={16} />
+            </div>
+            <div className="absolute right-0 top-full mt-2 w-48 p-2 bg-gray-900/95 text-white text-xs rounded-lg shadow-xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-10 pointer-events-none text-center backdrop-blur">
+               {description}
+               <div className="absolute -top-1 right-2 w-2 h-2 bg-gray-900/95 rotate-45"></div>
+            </div>
+         </div>
+      </div>
+    </div>
+  );
+};
+
+// --- Custom Component Maps ---
+
+const CustomPre = ({ node, children, ...props }: any) => {
+    // Attempt to extract the language from the child <code> element
+    const codeNode = node?.children?.find((child: any) => child.tagName === 'code');
+    const className = codeNode?.properties?.className || [];
+    const rawContent = codeNode?.children?.[0]?.value || '';
+    const contentStr = String(rawContent).trim();
+
+    const isSvgLang = Array.isArray(className) ? className.includes('language-svg') : (typeof className === 'string' && className.includes('language-svg'));
+    const isAnalysis = Array.isArray(className) ? className.includes('language-analysis') : (typeof className === 'string' && className.includes('language-analysis'));
+    const looksLikeSvg = contentStr.startsWith('<svg') || contentStr.startsWith('```svg') || contentStr.includes('xmlns="http://www.w3.org/2000/svg"');
+
+    if (isSvgLang || isAnalysis || looksLikeSvg) {
+        // Render children directly so the `code` component can handle it
+        return <>{children}</>;
+    }
+
+    return (
+        <div className="bg-gray-900 rounded-lg p-3 my-3 overflow-x-auto shadow-sm border border-gray-800">
+            <pre className="font-mono text-sm text-gray-100" {...props}>{children}</pre>
+        </div>
+    );
+};
+
+const CustomCode = ({ node, className, children, ...props }: any) => {
+    const match = /language-(\w+)/.exec(className || '');
+    let lang = match ? match[1] : '';
+    const content = String(children).replace(/\n$/, '').trim();
+
+    if (content.startsWith('<svg') && content.endsWith('</svg>')) {
+        lang = 'svg';
+    }
+
+    if (lang === 'analysis') {
+        return <AnalysisPanel content={content} />;
+    }
+
+    if (lang === 'svg') {
+        return <SvgBlock content={content} />;
+    }
+
+    if (!className && content.startsWith('<svg')) {
+        return <SvgBlock content={content} />;
+    }
+
+    const isInline = !className;
+    if (isInline) {
+        return <code className="bg-gray-100 rounded px-1 py-0.5 text-sm font-mono text-pink-600 border border-gray-200" {...props}>{children}</code>;
+    }
+
+    return <code className={`${className} font-mono text-sm`} {...props}>{children}</code>;
+};
+
+// Define components object
+const MARKDOWN_COMPONENTS = {
+    h1: ({node, ...props}: any) => <h4 className="font-bold my-2 text-gray-900" {...props} />,
+    h2: ({node, ...props}: any) => <h5 className="font-bold my-2 text-gray-900" {...props} />,
+    h3: ({node, ...props}: any) => <h6 className="font-bold my-2 text-gray-800" {...props} />,
+    p: ({node, ...props}: any) => <p className="mb-2 last:mb-0 text-gray-700 leading-7 text-sm" {...props} />,
+    strong: ({node, ...props}: any) => <strong className="font-bold text-amber-800 bg-amber-100/50 px-1 rounded" {...props} />,
+    ul: ({node, ...props}: any) => <ul className="list-disc list-outside ml-4 my-2 space-y-1 text-gray-700 text-sm" {...props} />,
+    ol: ({node, ...props}: any) => <ol className="list-decimal list-outside ml-4 my-2 space-y-1 text-gray-700 text-sm" {...props} />,
+    blockquote: ({node, ...props}: any) => <blockquote className="border-l-4 border-blue-400 pl-4 py-1 my-2 bg-gray-50 italic text-gray-600" {...props} />,
+    table: ({node, ...props}: any) => (
+        <div className="overflow-x-auto my-2 rounded border border-gray-200">
+            <table className="min-w-full divide-y divide-gray-200 text-xs" {...props} />
+        </div>
+    ),
+    th: ({node, ...props}: any) => <th className="px-2 py-1 text-left font-semibold text-gray-600 bg-gray-50" {...props} />,
+    td: ({node, ...props}: any) => <td className="px-2 py-1 text-gray-700 border-t border-gray-100" {...props} />,
+    pre: CustomPre,
+    code: CustomCode
+};
+
+// --- Main Component ---
+
+const MarkdownRenderer: React.FC<Props> = ({ content, className }) => {
+  const finalClass = className 
+    ? `prose prose-blue max-w-none dark:prose-invert leading-relaxed text-gray-800 ${className}`
+    : `prose prose-blue prose-sm max-w-none dark:prose-invert leading-relaxed text-gray-800`;
+
+  return (
+    <div className={finalClass}>
       <ReactMarkdown
         remarkPlugins={remarkPlugins as any}
         rehypePlugins={rehypePlugins as any}
-        components={{
-          h1: ({node, ...props}) => <h1 className="text-xl font-bold my-3 text-blue-900 border-b pb-1" {...props} />,
-          h2: ({node, ...props}) => <h2 className="text-lg font-bold my-2 text-blue-800" {...props} />,
-          h3: ({node, ...props}) => <h3 className="text-md font-semibold my-2 text-blue-700" {...props} />,
-          strong: ({node, ...props}) => <strong className="font-bold text-blue-900 bg-blue-100 px-1.5 py-0.5 rounded-md mx-0.5 text-[0.95em]" {...props} />,
-          ul: ({node, ...props}) => <ul className="list-disc list-outside ml-5 my-2 space-y-1" {...props} />,
-          ol: ({node, ...props}) => <ol className="list-decimal list-outside ml-5 my-2 space-y-1" {...props} />,
-          blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-blue-400 pl-4 py-1 my-2 bg-gray-50 italic text-gray-600" {...props} />,
-          
-          // Enhanced Pre handling
-          pre: ({node, ...props}) => {
-            const codeNode = node?.children?.find((child: any) => child.tagName === 'code') as any;
-            const className = codeNode?.properties?.className || [];
-            
-            // Check for custom block types
-            const isSvg = Array.isArray(className) ? className.includes('language-svg') : typeof className === 'string' && className.includes('language-svg');
-            const isAnalysis = Array.isArray(className) ? className.includes('language-analysis') : typeof className === 'string' && className.includes('language-analysis');
-
-            if (isSvg || isAnalysis) {
-               return <>{props.children}</>;
-            }
-
-            return (
-              <div className="bg-gray-900 rounded-lg p-3 my-3 overflow-x-auto shadow-sm border border-gray-800">
-                <pre className="font-mono text-sm text-gray-100" {...props} />
-              </div>
-            );
-          },
-
-          // Enhanced Code handling
-          code: ({node, className, children, ...props}) => {
-             const match = /language-(\w+)/.exec(className || '');
-             const lang = match ? match[1] : '';
-
-             if (lang === 'analysis') {
-                const analysisContent = String(children).replace(/\n$/, '');
-                return <AnalysisPanel content={analysisContent} />;
-             }
-
-             if (lang === 'svg') {
-                const svgString = String(children).replace(/\n$/, '');
-                // Try to extract title for tooltip, case insensitive match
-                const titleMatch = svgString.match(/<title.*?>(.*?)<\/title>/i);
-                const description = titleMatch ? titleMatch[1] : 'AI 生成的图形推理演示';
-
-                return (
-                  <div className="relative group my-4 rounded-xl overflow-hidden border-2 border-dashed border-gray-200 bg-white">
-                    <div 
-                      className="p-4 flex justify-center items-center shadow-sm"
-                      dangerouslySetInnerHTML={{ __html: svgString }}
-                    />
-                    
-                    <div className="absolute top-2 right-2 transition-opacity duration-200">
-                       <div className="group/tooltip relative">
-                          <div className="bg-blue-50/80 backdrop-blur-sm text-blue-600 p-1.5 rounded-full cursor-help hover:bg-blue-100 border border-blue-100 shadow-sm">
-                             <Info size={16} />
-                          </div>
-                          <div className="absolute right-0 top-full mt-2 w-48 p-2 bg-gray-900/95 text-white text-xs rounded-lg shadow-xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-10 pointer-events-none text-center backdrop-blur">
-                             {description}
-                             <div className="absolute -top-1 right-2 w-2 h-2 bg-gray-900/95 rotate-45"></div>
-                          </div>
-                       </div>
-                    </div>
-                  </div>
-                );
-             }
-
-             const isInline = !className; 
-             return isInline 
-               ? <code className="bg-gray-100 rounded px-1 py-0.5 text-sm font-mono text-pink-600 border border-gray-200" {...props}>{children}</code>
-               : <code className={`${className} font-mono text-sm`} {...props}>{children}</code>;
-          },
-
-          p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
-          
-          table: ({node, ...props}) => (
-            <div className="overflow-x-auto my-3 rounded-lg border border-gray-200 shadow-sm">
-              <table className="min-w-full divide-y divide-gray-200 text-sm" {...props} />
-            </div>
-          ),
-          thead: ({node, ...props}) => <thead className="bg-gray-50" {...props} />,
-          tbody: ({node, ...props}) => <tbody className="bg-white divide-y divide-gray-200" {...props} />,
-          tr: ({node, ...props}) => <tr className="hover:bg-gray-50 transition-colors" {...props} />,
-          th: ({node, ...props}) => <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap bg-gray-100" {...props} />,
-          td: ({node, ...props}) => <td className="px-3 py-2 text-gray-700 whitespace-nowrap tabular-nums" {...props} />,
-        }}
+        components={MARKDOWN_COMPONENTS}
       >
         {content}
       </ReactMarkdown>

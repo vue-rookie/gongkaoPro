@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Category, Message, ExamMode } from '../types';
 import { MODE_LABELS } from '../constants';
-import { Folder, ChevronRight, ArrowLeft, Tag, Calendar, StickyNote, Trash2, BookOpen, Bot, Star, Plus, FolderOpen, CornerUpLeft } from 'lucide-react';
+import { Folder, ChevronRight, ArrowLeft, Tag, Calendar, StickyNote, Trash2, BookOpen, Bot, Star, Plus, FolderOpen, CornerUpLeft, CheckCircle2, Lightbulb, FileText, HelpCircle, BookText } from 'lucide-react';
 import MarkdownRenderer from './MarkdownRenderer';
 import ConfirmationModal from './ConfirmationModal';
 
@@ -60,12 +60,6 @@ const NotebookView: React.FC<Props> = ({
   const getMessageCount = (catId?: string) => {
     if (!catId) return modeMessages.filter(m => !m.categoryId).length;
     return modeMessages.filter(m => m.categoryId === catId).length;
-  };
-
-  // 4. Helper: Count SUBFOLDERS
-  const getSubfolderCount = (catId?: string) => {
-     if (!catId) return modeCategories.filter(c => !c.parentId).length;
-     return modeCategories.filter(c => c.parentId === catId).length;
   };
 
   const handleCreateCategory = () => {
@@ -130,7 +124,9 @@ const NotebookView: React.FC<Props> = ({
         <div className="flex items-center gap-3 p-4 border-b border-gray-100">
            <button onClick={() => setSelectedMessageId(null)} className="p-2 hover:bg-gray-100 rounded-full text-gray-500 transition-colors"><ArrowLeft size={20} /></button>
            <div className="flex-1">
-             <h2 className="font-bold text-gray-800 text-sm md:text-base line-clamp-1">题目详情</h2>
+             <h2 className="font-bold text-gray-800 text-sm md:text-base line-clamp-1">
+                {msg.quizData ? '全真模拟卷 · 复习模式' : '题目详情'}
+             </h2>
              <p className="text-xs text-gray-400">{new Date(msg.timestamp).toLocaleString()}</p>
            </div>
            <button 
@@ -140,22 +136,122 @@ const NotebookView: React.FC<Props> = ({
              <Trash2 size={18} />
            </button>
         </div>
+        
         <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-gray-50">
            <div className="max-w-3xl mx-auto space-y-6">
+              
+              {/* Note Section - Moved to Top for better reviewing */}
+              <div className="bg-yellow-50 p-6 rounded-2xl shadow-sm border border-yellow-200 relative group transition-all hover:shadow-md">
+                  <div className="flex items-center gap-2 mb-3 text-yellow-800 font-bold">
+                    <StickyNote size={18} />
+                    <span>我的笔记</span>
+                  </div>
+                  <textarea 
+                    className="w-full bg-transparent border-0 outline-none focus:ring-0 focus:outline-none focus:border-none text-gray-700 text-sm leading-relaxed p-0 resize-none h-auto min-h-[100px] placeholder-yellow-800/30"
+                    style={{ border: 'none', boxShadow: 'none', outline: 'none' }} 
+                    value={msg.note || ''} 
+                    placeholder="在此输入复习重点、易错点或心得体会..." 
+                    onChange={(e) => onUpdateNote(msg.id, e.target.value)}
+                  />
+                  <div className="absolute top-4 right-4 text-xs text-yellow-600/60 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse"></span>
+                      自动保存
+                  </div>
+              </div>
+
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                  <div className="flex items-center gap-2 mb-4">
+                  <div className="flex items-center gap-2 mb-4 border-b border-gray-100 pb-3">
                      <div className="bg-blue-100 text-blue-600 p-1.5 rounded-lg"><Bot size={20} /></div>
                      <span className="font-bold text-gray-700">题目与解析</span>
+                     {msg.quizData && <span className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded-full ml-auto">共 {msg.quizData.length} 题</span>}
                   </div>
-                  <MarkdownRenderer content={msg.text} />
-              </div>
-              <div className="bg-yellow-50 p-6 rounded-2xl shadow-sm border border-yellow-200 relative group">
-                  <div className="flex items-center gap-2 mb-3 text-yellow-800 font-bold"><StickyNote size={18} /><span>我的笔记</span></div>
-                  <textarea 
-                    className="w-full bg-transparent border-none focus:ring-0 text-gray-700 text-sm leading-relaxed p-0 resize-none h-auto min-h-[100px]"
-                    value={msg.note || ''} placeholder="点击此处添加笔记..." onChange={(e) => onUpdateNote(msg.id, e.target.value)}
-                  />
-                  <div className="absolute top-4 right-4 text-xs text-yellow-400 opacity-0 group-hover:opacity-100 transition-opacity">自动保存</div>
+                  
+                  {/* RENDER QUIZ DATA IF AVAILABLE */}
+                  {msg.quizData ? (
+                      <div className="space-y-10">
+                          {msg.quizData.map((q, idx) => (
+                              <div key={idx} className="relative">
+                                  {/* Connector Line */}
+                                  {idx !== msg.quizData!.length - 1 && (
+                                      <div className="absolute left-[15px] top-8 bottom-[-40px] w-0.5 bg-gray-100"></div>
+                                  )}
+
+                                  <div className="flex gap-4">
+                                      <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-sm z-10">
+                                          {idx + 1}
+                                      </div>
+                                      <div className="flex-1 space-y-4 pt-1 w-full">
+                                          
+                                          {/* Shen Lun Reading Material in Review */}
+                                          {q.material && (
+                                              <div className="bg-stone-50 border-l-4 border-stone-300 p-4 mb-4 rounded-r-lg">
+                                                  <div className="flex items-center gap-2 text-stone-700 font-bold mb-2 text-xs uppercase tracking-wider">
+                                                       <BookText size={14} /> 给定资料
+                                                  </div>
+                                                  <div className="prose prose-sm prose-stone text-gray-600 leading-relaxed text-justify">
+                                                       {q.material}
+                                                  </div>
+                                              </div>
+                                          )}
+
+                                          {/* Question with Markdown Rendering (for SVG) */}
+                                          <div className="font-bold text-gray-800 text-lg leading-relaxed">
+                                              <MarkdownRenderer content={q.question} className="prose-base" />
+                                          </div>
+                                          
+                                          {/* Options (MCQ only) */}
+                                          {q.options && (
+                                              <div className="grid grid-cols-1 gap-2">
+                                                  {q.options.map((opt, i) => {
+                                                      // Determine correctness for display
+                                                      const optLabel = opt.split('.')[0].trim();
+                                                      const isCorrect = optLabel === q.answer || opt.startsWith(q.answer);
+                                                      
+                                                      return (
+                                                          <div key={i} className={`p-3 rounded-xl text-sm border flex items-center justify-between ${
+                                                              isCorrect 
+                                                              ? 'bg-green-50 border-green-200 text-green-800 font-bold ring-1 ring-green-100' 
+                                                              : 'bg-white border-gray-100 text-gray-600 opacity-70'
+                                                          }`}>
+                                                              <span>{opt}</span>
+                                                              {isCorrect && <CheckCircle2 size={16} className="text-green-600" />}
+                                                          </div>
+                                                      );
+                                                  })}
+                                              </div>
+                                          )}
+
+                                          {/* Analysis */}
+                                          <div className="bg-slate-50 rounded-xl p-4 text-sm border border-slate-100">
+                                              <div className="flex items-center gap-2 mb-2">
+                                                  <div className="bg-amber-100 text-amber-600 p-1 rounded"><Lightbulb size={12} /></div>
+                                                  <span className="font-bold text-slate-700 text-xs">
+                                                      {q.options ? '解析' : '参考范文与解析'}
+                                                  </span>
+                                                  {q.options && (
+                                                      <span className="text-xs text-slate-500 font-mono ml-2 bg-white border border-slate-200 px-1.5 py-0.5 rounded">Answer: {q.answer}</span>
+                                                  )}
+                                              </div>
+                                              
+                                              {!q.options && (
+                                                  <div className="mb-4 bg-white p-3 rounded border border-slate-200 prose prose-sm prose-indigo">
+                                                      <strong className="text-xs text-indigo-600 block mb-1">参考范文：</strong>
+                                                      <MarkdownRenderer content={q.answer} />
+                                                  </div>
+                                              )}
+
+                                              <div className="prose prose-sm max-w-none text-slate-600">
+                                                  <MarkdownRenderer content={q.analysis} />
+                                              </div>
+                                          </div>
+                                      </div>
+                                  </div>
+                              </div>
+                          ))}
+                      </div>
+                  ) : (
+                      <MarkdownRenderer content={msg.text} />
+                  )}
               </div>
            </div>
         </div>
@@ -307,28 +403,50 @@ const NotebookView: React.FC<Props> = ({
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 gap-3">
-                            {currentMessages.map(msg => (
-                                <div 
-                                key={msg.id} 
-                                onClick={() => setSelectedMessageId(msg.id)}
-                                className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-300 cursor-pointer transition-all group"
-                                >
-                                <div className="flex justify-between items-start mb-2">
-                                    <div className="flex gap-2">
-                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${msg.role === 'user' ? 'bg-gray-100 text-gray-500 border-gray-200' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
-                                            {msg.role === 'user' ? '我的提问' : 'AI 回答'}
-                                        </span>
-                                        <span className="text-xs text-gray-400 flex items-center gap-1">
-                                            <Calendar size={10} />
-                                            {new Date(msg.timestamp).toLocaleDateString()}
-                                        </span>
+                            {currentMessages.map(msg => {
+                                const isQuiz = msg.quizData && msg.quizData.length > 0;
+                                const title = isQuiz ? `[全真模拟卷] 内含 ${msg.quizData!.length} 道题目` : msg.text.replace(/[*#`]/g, '');
+
+                                return (
+                                    <div 
+                                    key={msg.id} 
+                                    onClick={() => setSelectedMessageId(msg.id)}
+                                    className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-300 cursor-pointer transition-all group"
+                                    >
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div className="flex gap-2">
+                                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${msg.role === 'user' ? 'bg-gray-100 text-gray-500 border-gray-200' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                                                {msg.role === 'user' ? '我的提问' : 'AI 回答'}
+                                            </span>
+                                            {isQuiz && (
+                                                <span className="px-2 py-0.5 rounded text-[10px] font-bold border bg-indigo-50 text-indigo-600 border-indigo-100 flex items-center gap-1">
+                                                    <FileText size={10} />
+                                                    模拟卷
+                                                </span>
+                                            )}
+                                            <span className="text-xs text-gray-400 flex items-center gap-1">
+                                                <Calendar size={10} />
+                                                {new Date(msg.timestamp).toLocaleDateString()}
+                                            </span>
+                                        </div>
+                                        {msg.note && <div className="text-amber-500"><StickyNote size={14} className="fill-amber-100" /></div>}
                                     </div>
-                                    {msg.note && <div className="text-amber-500"><StickyNote size={14} className="fill-amber-100" /></div>}
-                                </div>
-                                <div className="text-sm text-gray-700 line-clamp-2 mb-2 font-medium">{msg.text.replace(/[*#`]/g, '')}</div>
-                                {msg.note && <div className="bg-yellow-50 text-xs text-yellow-800 p-2 rounded-lg line-clamp-1 border border-yellow-100"><span className="font-bold mr-1">笔记:</span>{msg.note}</div>}
-                                </div>
-                            ))}
+                                    <div className={`text-sm line-clamp-2 mb-2 font-medium ${isQuiz ? 'text-indigo-700 font-bold' : 'text-gray-700'}`}>
+                                        {title}
+                                    </div>
+                                    
+                                    {/* Quiz Preview */}
+                                    {isQuiz && (
+                                        <div className="text-xs text-gray-500 mb-2 bg-gray-50 p-2 rounded-lg border border-gray-100 flex items-start gap-1.5 line-clamp-1">
+                                            <HelpCircle size={12} className="flex-shrink-0 mt-0.5 text-gray-400" />
+                                            <span>Q1: {msg.quizData![0].question}</span>
+                                        </div>
+                                    )}
+
+                                    {msg.note && <div className="bg-yellow-50 text-xs text-yellow-800 p-2 rounded-lg line-clamp-1 border border-yellow-100"><span className="font-bold mr-1">笔记:</span>{msg.note}</div>}
+                                    </div>
+                                );
+                            })}
                         </div>
                     )}
                 </div>
@@ -407,37 +525,29 @@ const NotebookView: React.FC<Props> = ({
                     onClick={() => setSelectedCategoryId('UNCATEGORIZED')}
                     className="bg-gradient-to-br from-blue-50 to-white p-4 rounded-xl border border-blue-100 hover:shadow-md cursor-pointer transition-all group flex flex-col justify-between h-32 md:h-40"
                 >
-                   <div className="bg-blue-100 w-10 h-10 rounded-full flex items-center justify-center text-blue-500 mb-2 group-hover:scale-110 transition-transform">
-                       <FolderOpen size={20} />
+                   <div className="bg-blue-100 w-10 h-10 rounded-lg flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
+                     <Tag size={20} />
                    </div>
                    <div>
-                       <div className="font-bold text-gray-800 group-hover:text-blue-700 transition-colors">默认收纳</div>
-                       <div className="text-xs text-gray-500 mt-1">{uncatCount} 个条目</div>
+                     <h4 className="font-bold text-gray-800">默认收纳</h4>
+                     <p className="text-xs text-gray-400 mt-1">{uncatCount} 条笔记</p>
                    </div>
                 </div>
 
-                {/* Root User Categories */}
+                {/* User Folders */}
                 {rootCategories.map(cat => (
                     <div 
                         key={cat.id}
                         onClick={() => setSelectedCategoryId(cat.id)}
-                        className="bg-white p-4 rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-md cursor-pointer transition-all group flex flex-col justify-between h-32 md:h-40 relative"
+                        className="bg-white p-4 rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-md cursor-pointer transition-all group flex flex-col justify-between h-32 md:h-40"
                     >
-                        <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <ChevronRight size={16} className="text-gray-300" />
-                        </div>
-                        <div className="bg-amber-50 w-10 h-10 rounded-full flex items-center justify-center text-amber-500 mb-2 group-hover:scale-110 transition-transform border border-amber-100">
-                            <Folder size={20} className="fill-amber-100" />
-                        </div>
-                        <div>
-                            <div className="font-bold text-gray-800 group-hover:text-blue-700 transition-colors truncate" title={cat.name}>
-                                {cat.name}
-                            </div>
-                            <div className="text-xs text-gray-500 mt-1 flex gap-2">
-                                <span>{getMessageCount(cat.id)} 题</span>
-                                {getSubfolderCount(cat.id) > 0 && <span className="text-blue-400">• {getSubfolderCount(cat.id)} 文件夹</span>}
-                            </div>
-                        </div>
+                       <div className="bg-amber-50 w-10 h-10 rounded-lg flex items-center justify-center text-amber-500 group-hover:scale-110 transition-transform">
+                         <Folder size={20} className="fill-current bg-opacity-50" />
+                       </div>
+                       <div>
+                         <h4 className="font-bold text-gray-800 truncate">{cat.name}</h4>
+                         <p className="text-xs text-gray-400 mt-1">{getMessageCount(cat.id)} 条笔记</p>
+                       </div>
                     </div>
                 ))}
             </div>

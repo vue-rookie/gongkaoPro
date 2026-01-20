@@ -1,11 +1,7 @@
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
-import { ExamMode } from '../types';
+import { ExamMode, QuizQuestion } from '../types';
 import { SYSTEM_INSTRUCTIONS, MODEL_FLASH, MODEL_PRO } from '../constants';
 
-// Initialize the client
-// Note: In a real Next.js production app, you should ideally proxy these requests 
-// through a server action or API route to hide the API key. 
-// For this demo, we use NEXT_PUBLIC_ to allow client-side calls.
 const apiKey = process.env.NEXT_PUBLIC_API_KEY || process.env.API_KEY;
 if (!apiKey) {
     console.error("API Key not found. Please set NEXT_PUBLIC_API_KEY in .env.local");
@@ -14,13 +10,14 @@ const ai = new GoogleGenAI({ apiKey: apiKey! });
 
 interface SendMessageParams {
   text: string;
-  image?: string; // base64 string without data prefix
+  image?: string;
   mode: ExamMode;
   history?: { role: 'user' | 'model'; parts: { text: string }[] }[];
 }
 
 interface GeminiResponse {
   text: string;
+  quizData?: QuizQuestion[];
 }
 
 export const sendMessageToGemini = async ({
@@ -30,54 +27,45 @@ export const sendMessageToGemini = async ({
   history = []
 }: SendMessageParams): Promise<GeminiResponse> => {
   try {
-    // Configure Model & Thinking Budget based on the task type (Gemini 3 Optimization)
     let modelName = MODEL_FLASH;
     let thinkingBudget: number | undefined = undefined;
 
     switch (mode) {
       case ExamMode.SHEN_LUN:
-        // Essay writing needs high intelligence and structure.
         modelName = MODEL_PRO; 
-        thinkingBudget = 2048; // Deep thinking for outlining and policy analysis
+        thinkingBudget = 2048; 
         break;
-        
       case ExamMode.MIAN_SHI:
-        // Interviews need high nuance and "EQ", but also reasonable latency.
         modelName = MODEL_PRO; 
-        thinkingBudget = 512; // Light thinking to organize speech points
+        thinkingBudget = 512; 
         break;
-        
       case ExamMode.XING_CE:
       default:
-        // Logic puzzles/Math need reasoning but Flash is generally fast and capable enough with thinking.
         modelName = MODEL_FLASH; 
-        thinkingBudget = 1024; // Moderate thinking for logic derivation
+        thinkingBudget = 1024; 
         break;
     }
 
     const parts: any[] = [{ text }];
 
     if (image) {
-      // Remove data URL prefix if present (e.g., "data:image/png;base64,")
       const base64Data = image.includes('base64,') 
         ? image.split('base64,')[1] 
         : image;
 
       parts.unshift({
         inlineData: {
-          mimeType: 'image/jpeg', // Assuming JPEG for simplicity, or detect from string
+          mimeType: 'image/jpeg', 
           data: base64Data
         }
       });
     }
 
-    // Construct the chat session
     const chat = ai.chats.create({
       model: modelName,
       config: {
         systemInstruction: SYSTEM_INSTRUCTIONS[mode],
         thinkingConfig: thinkingBudget ? { thinkingBudget } : undefined,
-        // Removed googleSearch tool to rely on internal knowledge base
       },
       history: history 
     });
@@ -86,7 +74,6 @@ export const sendMessageToGemini = async ({
       message: parts
     });
     
-    // Extract text
     const responseText = result.text || "抱歉，我无法生成回答。";
     
     return {
@@ -96,5 +83,61 @@ export const sendMessageToGemini = async ({
   } catch (error) {
     console.error("Gemini API Error:", error);
     throw new Error("AI 服务暂时不可用，请检查网络或稍后再试。");
+  }
+};
+
+export const generateQuiz = async (mode: ExamMode, topic?: string, count: number = 5): Promise<QuizQuestion[]> => {
+  try {
+    const modelName = MODEL_FLASH; 
+    let prompt = "";
+
+    if (mode === ExamMode.SHEN_LUN) {
+        prompt = `
+          请生成 1 道【申论 (Essay Writing)】模拟题。
+          主题：${topic || '社会热点'}。
+          
+          要求：
+          1. 返回纯 JSON 数组格式，只包含 1 个对象。
+          2. JSON 字段包含：id, material (给定资料 300字+), question, answer (参考范文), analysis (解析), options: null。
+        `;
+    } else {
+        const isGraphicReasoning = topic?.includes('图形推理');
+        
+        prompt = `
+          请生成 ${count} 道 ${mode === ExamMode.MIAN_SHI ? '面试' : '行测'} 题目。
+          主题：${topic || '随机'}。
+
+          要求：
+          1. 返回纯 JSON 数组。
+          2. 包含字段：id, question, options (数组), answer, analysis。
+          ${isGraphicReasoning ? `
+          3. **图形推理**：
+             - 题干：描述后，必须用 \`\`\`svg ... \`\`\` 包裹 SVG 代码。
+             - 选项：必须是 "A. <svg>...</svg>" 格式。
+          ` : ''}
+        `;
+    }
+
+    const response = await ai.models.generateContent({
+      model: modelName,
+      contents: { parts: [{ text: prompt }] },
+      config: {
+        responseMimeType: "application/json",
+      }
+    });
+
+    const jsonText = response.text || "[]";
+    const cleanJson = jsonText.replace(/^```json\s*/, '').replace(/^```\s*/, '').replace(/```$/, '').trim();
+    
+    const quizData = JSON.parse(cleanJson);
+    
+    return quizData.map((q: any, index: number) => ({
+      ...q,
+      id: q.id || `quiz-${Date.now()}-${index}`
+    }));
+
+  } catch (error) {
+    console.error("Quiz Generation Error:", error);
+    throw new Error("无法生成题目，请稍后再试。");
   }
 };

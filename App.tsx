@@ -8,8 +8,8 @@ import NotebookView from './components/NotebookView';
 import ConfirmationModal from './components/ConfirmationModal';
 import HistorySidebar from './components/HistorySidebar';
 import AuthModal from './components/AuthModal'; 
-import { ChatState, ExamMode, Message, Category, Session, User } from './types';
-import { sendMessageToGemini } from './services/geminiService';
+import { ChatState, ExamMode, Message, Category, Session, User, QuizConfig } from './types';
+import { sendMessageToGemini, generateQuiz } from './services/geminiService';
 import { MODE_LABELS } from './constants';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -254,13 +254,17 @@ const App: React.FC = () => {
     }
   };
 
-  const handleSendMessage = useCallback(async (text: string, image?: string) => {
+  const handleSendMessage = useCallback(async (text: string, image?: string, quizConfig?: QuizConfig) => {
     const activeSessionId = chatState.currentSessionId;
-    
+    const isQuizRequest = text === "start_quiz_mode" && !!quizConfig;
+    const displayText = isQuizRequest 
+        ? `开始刷题：${quizConfig.topic} (${quizConfig.count}题)` 
+        : text;
+
     const userMsg: Message = {
       id: generateId(),
       role: 'user',
-      text,
+      text: displayText,
       image,
       timestamp: Date.now(),
       mode: chatState.currentMode,
@@ -274,7 +278,7 @@ const App: React.FC = () => {
         if (currentSessionMessages.length === 0) {
             updatedSessions = updatedSessions.map(s => 
                 s.id === activeSessionId 
-                ? { ...s, title: text.slice(0, 15) + (text.length > 15 ? '...' : ''), updatedAt: Date.now() } 
+                ? { ...s, title: displayText.slice(0, 15) + (displayText.length > 15 ? '...' : ''), updatedAt: Date.now() } 
                 : s
             );
         } else {
@@ -295,40 +299,63 @@ const App: React.FC = () => {
     });
 
     try {
-      const historyForApi = chatState.messages
-        .filter(m => m.sessionId === activeSessionId && !m.isError && !m.isSystem)
-        .map(m => ({
-          role: m.role,
-          parts: [{ text: m.text }] 
-        }));
+      if (isQuizRequest) {
+          // --- QUIZ FLOW ---
+          const quizData = await generateQuiz(chatState.currentMode, quizConfig.topic, quizConfig.count);
+          
+          const modelMsg: Message = {
+            id: generateId(),
+            role: 'model',
+            text: `已为您生成 ${quizConfig.count} 道 [${quizConfig.topic}] 模拟题，计时开始！`,
+            quizData: quizData,
+            timestamp: Date.now(),
+            mode: chatState.currentMode,
+            sessionId: activeSessionId
+          };
 
-      const response = await sendMessageToGemini({
-        text,
-        image,
-        mode: chatState.currentMode,
-        history: historyForApi
-      });
+          setChatState(prev => ({
+            ...prev,
+            messages: [...prev.messages, modelMsg],
+            isLoading: false
+          }));
 
-      const modelMsg: Message = {
-        id: generateId(),
-        role: 'model',
-        text: response.text,
-        timestamp: Date.now(),
-        mode: chatState.currentMode,
-        sessionId: activeSessionId
-      };
+      } else {
+          // --- STANDARD CHAT FLOW ---
+          const historyForApi = chatState.messages
+            .filter(m => m.sessionId === activeSessionId && !m.isError && !m.isSystem && !m.quizData) // Filter out complex quiz messages from history to keep context clean
+            .map(m => ({
+              role: m.role,
+              parts: [{ text: m.text }] 
+            }));
 
-      setChatState(prev => ({
-        ...prev,
-        messages: [...prev.messages, modelMsg],
-        isLoading: false
-      }));
+          const response = await sendMessageToGemini({
+            text,
+            image,
+            mode: chatState.currentMode,
+            history: historyForApi
+          });
+
+          const modelMsg: Message = {
+            id: generateId(),
+            role: 'model',
+            text: response.text,
+            timestamp: Date.now(),
+            mode: chatState.currentMode,
+            sessionId: activeSessionId
+          };
+
+          setChatState(prev => ({
+            ...prev,
+            messages: [...prev.messages, modelMsg],
+            isLoading: false
+          }));
+      }
 
     } catch (error) {
       const errorMsg: Message = {
         id: generateId(),
         role: 'model',
-        text: "抱歉，出现了一些网络问题，请重试。",
+        text: "抱歉，生成内容时出现错误，请重试。",
         timestamp: Date.now(),
         isError: true,
         mode: chatState.currentMode,

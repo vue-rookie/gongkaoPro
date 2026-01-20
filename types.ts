@@ -27,6 +27,21 @@ export interface User {
   createdAt: number;
 }
 
+export interface QuizQuestion {
+  id: string;
+  question: string;
+  material?: string; // For Shen Lun: The reading passage/context
+  options?: string[]; // Multiple choice options (Xing Ce only)
+  answer: string; // Correct answer letter OR Reference Essay
+  analysis: string; // Detailed analysis
+  userAnswer?: string; // To track user state locally
+}
+
+export interface QuizConfig {
+  topic: string;
+  count: number;
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'model';
@@ -36,6 +51,9 @@ export interface Message {
   isError?: boolean;
   isSystem?: boolean; 
   
+  // Quiz Data
+  quizData?: QuizQuestion[];
+
   // Study tools
   isBookmarked?: boolean;
   categoryId?: string; // Link to a Category ID

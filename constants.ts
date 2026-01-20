@@ -4,6 +4,13 @@ import { ExamMode } from './types';
 export const MODEL_FLASH = 'gemini-3-flash-preview';
 export const MODEL_PRO = 'gemini-3-pro-preview';
 
+// Exam Sub-topics
+export const EXAM_TOPICS: Record<ExamMode, string[]> = {
+  [ExamMode.XING_CE]: ['随机混卷', '常识判断', '言语理解与表达', '数量关系', '判断推理', '资料分析'],
+  [ExamMode.SHEN_LUN]: ['随机练习', '归纳概括', '综合分析', '提出对策', '贯彻执行', '文章写作'],
+  [ExamMode.MIAN_SHI]: ['随机模拟', '综合分析', '人际关系', '应急应变', '组织管理', '情景模拟']
+};
+
 // System Instructions - prompt engineering is key here
 const BASE_INSTRUCTION = `
 你是一位中国公考（公务员、事业单位）顶级培训专家。

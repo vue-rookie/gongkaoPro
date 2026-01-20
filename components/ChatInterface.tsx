@@ -1,17 +1,21 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Message, ExamMode, Category } from '../types';
+import { Message, ExamMode, Category, QuizConfig } from '../types';
 import MarkdownRenderer from './MarkdownRenderer';
 import SaveToNotebookModal from './SaveToNotebookModal';
+import QuizPaper from './QuizPaper';
+import QuizConfigModal from './QuizConfigModal';
 import { MODE_LABELS } from '../constants';
-import { Send, Image as ImageIcon, Loader2, X, Bot, Sparkles, Plus, ArrowLeftRight, Star, StickyNote, PenLine, Check, Tag } from 'lucide-react';
+import { generateQuiz } from '../services/geminiService';
+import { v4 as uuidv4 } from 'uuid';
+import { Send, Image as ImageIcon, Loader2, X, Bot, Sparkles, Plus, ArrowLeftRight, Star, StickyNote, PenLine, Check, Tag, ScrollText } from 'lucide-react';
 
 interface Props {
   messages: Message[];
   categories: Category[];
   isLoading: boolean;
-  onSendMessage: (text: string, image?: string) => void;
+  onSendMessage: (text: string, image?: string, quizConfig?: QuizConfig) => void;
   currentMode: ExamMode;
-  onSaveMessage: (id: string, categoryId: string) => void; // Updated signature
+  onSaveMessage: (id: string, categoryId: string) => void; 
   onCreateCategory: (name: string) => string;
   onUpdateNote: (id: string, note: string) => void;
 }
@@ -28,6 +32,8 @@ const ChatInterface: React.FC<Props> = ({
 }) => {
   const [inputText, setInputText] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isQuizLoading, setIsQuizLoading] = useState(false);
+  const [isQuizConfigOpen, setIsQuizConfigOpen] = useState(false);
   
   // Note editing state
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
@@ -49,7 +55,7 @@ const ChatInterface: React.FC<Props> = ({
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, isLoading]);
+  }, [messages, isLoading, isQuizLoading]);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -76,11 +82,19 @@ const ChatInterface: React.FC<Props> = ({
   };
 
   const handleSend = () => {
-    if ((!inputText.trim() && !selectedImage) || isLoading) return;
+    if ((!inputText.trim() && !selectedImage) || isLoading || isQuizLoading) return;
     onSendMessage(inputText, selectedImage || undefined);
     setInputText('');
     setSelectedImage(null);
     if (textareaRef.current) textareaRef.current.style.height = '44px';
+  };
+
+  const handleQuizConfigStart = (topic: string, count: number) => {
+    if (isLoading || isQuizLoading) return;
+    setIsQuizLoading(true);
+    // Send a special message with config to App.tsx
+    onSendMessage("start_quiz_mode", undefined, { topic, count });
+    setIsQuizLoading(false); // App.tsx will set its own loading state
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -92,7 +106,6 @@ const ChatInterface: React.FC<Props> = ({
 
   // --- Actions ---
   const handleBookmarkClick = (msgId: string) => {
-     // Always open the modal to allow re-categorization or new save
      setMessageToSaveId(msgId);
      setSaveModalOpen(true);
   };
@@ -132,6 +145,14 @@ const ChatInterface: React.FC<Props> = ({
   return (
     <div className="absolute inset-0 flex flex-col bg-white md:rounded-t-2xl shadow-sm border-x border-t border-gray-100 overflow-hidden">
       
+      {/* Quiz Configuration Modal */}
+      <QuizConfigModal 
+         isOpen={isQuizConfigOpen} 
+         onClose={() => setIsQuizConfigOpen(false)}
+         onStart={handleQuizConfigStart}
+         currentMode={currentMode}
+      />
+
       {/* Save Modal */}
       <SaveToNotebookModal 
         isOpen={saveModalOpen}
@@ -191,9 +212,9 @@ const ChatInterface: React.FC<Props> = ({
               key={msg.id}
               className={`flex w-full group ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
-              <div className={`flex flex-col max-w-[90%] md:max-w-[80%] gap-1 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+              <div className={`flex flex-col max-w-[100%] md:max-w-[90%] gap-1 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                 
-                <div className={`flex gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                <div className={`flex gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'} w-full`}>
                     <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center shadow-sm mt-auto ${
                     msg.role === 'user' 
                         ? 'bg-gradient-to-br from-blue-500 to-blue-700 text-white' 
@@ -202,29 +223,34 @@ const ChatInterface: React.FC<Props> = ({
                         {msg.role === 'user' ? <div className="text-xs font-bold">ME</div> : <Sparkles size={16} />}
                     </div>
 
-                    <div className="flex flex-col min-w-0">
-                    <div
-                        className={`px-4 py-3 shadow-sm text-[15px] leading-relaxed break-words relative ${
-                        msg.role === 'user'
-                            ? 'bg-blue-600 text-white rounded-2xl rounded-br-none'
-                            : 'bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-bl-none overflow-x-auto'
-                        } ${msg.isBookmarked ? 'ring-2 ring-amber-200 ring-offset-1' : ''}`}
-                    >
-                        {msg.image && (
-                        <div className="mb-3 overflow-hidden rounded-lg bg-black/5">
-                            <img 
-                            src={msg.image} 
-                            alt="User upload" 
-                            className="max-w-full h-auto max-h-60 object-contain mx-auto" 
-                            />
+                    <div className="flex flex-col min-w-0 flex-1 max-w-full">
+                    {/* Render QuizPaper if quizData exists */}
+                    {msg.quizData ? (
+                        <QuizPaper questions={msg.quizData} mode={msg.mode || ExamMode.XING_CE} />
+                    ) : (
+                        <div
+                            className={`px-4 py-3 shadow-sm text-[15px] leading-relaxed break-words relative ${
+                            msg.role === 'user'
+                                ? 'bg-blue-600 text-white rounded-2xl rounded-br-none max-w-fit ml-auto'
+                                : 'bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-bl-none overflow-x-auto w-full'
+                            } ${msg.isBookmarked ? 'ring-2 ring-amber-200 ring-offset-1' : ''}`}
+                        >
+                            {msg.image && (
+                            <div className="mb-3 overflow-hidden rounded-lg bg-black/5">
+                                <img 
+                                src={msg.image} 
+                                alt="User upload" 
+                                className="max-w-full h-auto max-h-60 object-contain mx-auto" 
+                                />
+                            </div>
+                            )}
+                            {msg.role === 'model' ? (
+                                <MarkdownRenderer content={msg.text} />
+                            ) : (
+                                <div className="whitespace-pre-wrap">{msg.text}</div>
+                            )}
                         </div>
-                        )}
-                        {msg.role === 'model' ? (
-                            <MarkdownRenderer content={msg.text} />
-                        ) : (
-                            <div className="whitespace-pre-wrap">{msg.text}</div>
-                        )}
-                    </div>
+                    )}
 
                     {/* Action Bar */}
                     <div className={`flex items-center gap-1 mt-1 px-1 transition-opacity ${
@@ -321,19 +347,26 @@ const ChatInterface: React.FC<Props> = ({
           );
         })}
 
-        {isLoading && (
+        {/* Loading States */}
+        {(isLoading || isQuizLoading) && (
           <div className="flex justify-start w-full animate-pulse">
              <div className="flex max-w-[80%] gap-2">
                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white border border-gray-100 flex items-center justify-center text-blue-600 shadow-sm mt-auto">
                  <Sparkles size={16} />
                </div>
                <div className="bg-white border border-gray-100 px-5 py-4 rounded-2xl rounded-bl-none shadow-sm flex items-center gap-3">
-                 <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
-                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
-                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
-                 </div>
-                 <span className="text-sm text-gray-400 font-medium">深度思考中...</span>
+                 {isQuizLoading ? (
+                     <div className="flex items-center gap-2 text-gray-600">
+                        <ScrollText size={18} className="animate-pulse" />
+                        <span className="text-sm font-medium">正在AI生成模拟卷...</span>
+                     </div>
+                 ) : (
+                     <div className="flex gap-1">
+                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
+                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
+                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
+                     </div>
+                 )}
                </div>
              </div>
           </div>
@@ -355,42 +388,53 @@ const ChatInterface: React.FC<Props> = ({
             )}
 
             <div className="flex items-end gap-2 bg-gray-50 p-1.5 rounded-[26px] border border-gray-200 focus-within:ring-2 focus-within:ring-blue-100 focus-within:border-blue-400 transition-all shadow-inner">
+                {/* Quiz Button */}
+                <button
+                    onClick={() => setIsQuizConfigOpen(true)}
+                    className="p-2 text-amber-500 hover:text-amber-600 hover:bg-amber-50 rounded-full transition-colors flex-shrink-0 h-[44px] w-[44px] flex items-center justify-center relative group"
+                    title="生成刷题试卷"
+                >
+                    <ScrollText size={22} />
+                </button>
+
+                <div className="w-px h-6 bg-gray-200 my-auto"></div>
+
                 <input
-                type="file"
-                accept="image/*"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                className="hidden"
+                    type="file"
+                    accept="image/*"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    className="hidden"
                 />
                 <button
-                onClick={() => fileInputRef.current?.click()}
-                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors flex-shrink-0 h-[44px] w-[44px] flex items-center justify-center"
-                title="上传题目"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors flex-shrink-0 h-[44px] w-[44px] flex items-center justify-center"
+                    title="上传题目"
                 >
-                {selectedImage ? <ImageIcon size={22} className="text-blue-600" /> : <Plus size={24} />}
+                    {selectedImage ? <ImageIcon size={22} className="text-blue-600" /> : <Plus size={24} />}
                 </button>
 
                 <textarea
-                ref={textareaRef}
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyDown={handleKeyDown}
-                rows={1}
-                placeholder={currentMode === ExamMode.XING_CE ? "来道真题或输入题目..." : "输入申论主题或面试问题..."}
-                className="flex-1 bg-transparent border-none focus:ring-0 resize-none py-2.5 px-1 text-[15px] outline-none text-gray-800 placeholder:text-gray-400 leading-6"
-                style={{ minHeight: '44px', maxHeight: '120px' }}
+                    ref={textareaRef}
+                    value={inputText}
+                    onChange={(e) => setInputText(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    rows={1}
+                    placeholder={currentMode === ExamMode.XING_CE ? "来道真题或输入题目..." : "输入申论主题或面试问题..."}
+                    className="flex-1 bg-transparent border-none focus:ring-0 resize-none py-2.5 px-1 text-[15px] outline-none text-gray-800 placeholder:text-gray-400 leading-6"
+                    style={{ minHeight: '44px', maxHeight: '120px' }}
                 />
 
                 <button
-                onClick={handleSend}
-                disabled={(!inputText.trim() && !selectedImage) || isLoading}
-                className={`rounded-full flex-shrink-0 transition-all duration-200 h-[44px] w-[44px] flex items-center justify-center ${
-                    (!inputText.trim() && !selectedImage) || isLoading
-                    ? 'bg-gray-200 text-gray-400'
-                    : 'bg-blue-600 text-white shadow-md hover:bg-blue-700 hover:scale-105 active:scale-95'
-                }`}
+                    onClick={handleSend}
+                    disabled={(!inputText.trim() && !selectedImage) || isLoading || isQuizLoading}
+                    className={`rounded-full flex-shrink-0 transition-all duration-200 h-[44px] w-[44px] flex items-center justify-center ${
+                        (!inputText.trim() && !selectedImage) || isLoading || isQuizLoading
+                        ? 'bg-gray-200 text-gray-400'
+                        : 'bg-blue-600 text-white shadow-md hover:bg-blue-700 hover:scale-105 active:scale-95'
+                    }`}
                 >
-                {isLoading ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} className={(!inputText.trim() && !selectedImage) ? "ml-0.5" : "ml-0.5 translate-x-[-1px]"} />}
+                    {(isLoading || isQuizLoading) ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} className={(!inputText.trim() && !selectedImage) ? "ml-0.5" : "ml-0.5 translate-x-[-1px]"} />}
                 </button>
             </div>
             </div>
