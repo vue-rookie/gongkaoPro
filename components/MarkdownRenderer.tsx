@@ -66,14 +66,22 @@ const SvgBlock = ({ content }: { content: string }) => {
   
   let cleanSvg = content.replace(/^svg/i, '').trim();
   
-  if (!cleanSvg.startsWith('<svg') && cleanSvg.includes('<path')) {
-     cleanSvg = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" stroke="black" fill="none">${cleanSvg}</svg>`;
+  // Clean up potential markdown code block artifacts
+  cleanSvg = cleanSvg.replace(/^```(svg|xml)?/i, '').replace(/```$/, '').trim();
+
+  // If missing SVG tag but has SVG-like content, wrap it
+  if (!cleanSvg.startsWith('<svg') && (cleanSvg.includes('<path') || cleanSvg.includes('<polygon') || cleanSvg.includes('<rect') || cleanSvg.includes('<circle') || cleanSvg.includes('</svg>'))) {
+     // If it has a closing tag but no opening, remove the closing to prevent duplicates when we wrap
+     if (cleanSvg.endsWith('</svg>')) {
+        cleanSvg = cleanSvg.substring(0, cleanSvg.lastIndexOf('</svg>'));
+     }
+     cleanSvg = `<svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" stroke="black" fill="none" style="max-width:100%; height:auto;">${cleanSvg}</svg>`;
   }
 
   return (
     <div className="relative group my-4 rounded-xl overflow-hidden border-2 border-dashed border-gray-200 bg-white">
       <div 
-        className="p-4 flex justify-center items-center shadow-sm"
+        className="p-4 flex justify-center items-center shadow-sm min-h-[150px]"
         dangerouslySetInnerHTML={{ __html: cleanSvg }}
       />
       <div className="absolute top-2 right-2 transition-opacity duration-200">
@@ -93,6 +101,19 @@ const SvgBlock = ({ content }: { content: string }) => {
 
 // --- Custom Component Definitions ---
 
+// Helper to check for SVG content similarity
+const looksLikeSvgContent = (str: string) => {
+    const s = str.trim();
+    return s.startsWith('<svg') || 
+           s.startsWith('```svg') ||
+           s.includes('xmlns="http://www.w3.org/2000/svg"') ||
+           s.endsWith('</svg>') ||
+           (s.includes('<polygon') && s.includes('points=')) ||
+           (s.includes('<path') && s.includes('d=')) ||
+           (s.includes('<rect') && s.includes('width=')) ||
+           (s.includes('<circle') && s.includes('cx='));
+};
+
 const CustomPre = ({ node, children, ...props }: any) => {
     // Attempt to extract the language from the child <code> element
     const codeNode = node?.children?.find((child: any) => child.tagName === 'code');
@@ -102,9 +123,11 @@ const CustomPre = ({ node, children, ...props }: any) => {
 
     const isSvgLang = Array.isArray(className) ? className.includes('language-svg') : (typeof className === 'string' && className.includes('language-svg'));
     const isAnalysis = Array.isArray(className) ? className.includes('language-analysis') : (typeof className === 'string' && className.includes('language-analysis'));
-    const looksLikeSvg = contentStr.startsWith('<svg') || contentStr.startsWith('```svg') || contentStr.includes('xmlns="http://www.w3.org/2000/svg"');
+    
+    // Check content if language tag is missing
+    const isSvgContent = looksLikeSvgContent(contentStr);
 
-    if (isSvgLang || isAnalysis || looksLikeSvg) {
+    if (isSvgLang || isAnalysis || isSvgContent) {
         // Render children directly so the `code` component can handle it
         return <>{children}</>;
     }
@@ -121,8 +144,11 @@ const CustomCode = ({ node, className, children, ...props }: any) => {
     let lang = match ? match[1] : '';
     const content = String(children).replace(/\n$/, '').trim();
 
-    if (content.startsWith('<svg') && content.endsWith('</svg>')) {
-        lang = 'svg';
+    // Auto-detect SVG if language is missing or generic but content looks like SVG
+    if (!lang || lang === 'xml' || lang === 'html') {
+        if (looksLikeSvgContent(content)) {
+            lang = 'svg';
+        }
     }
 
     if (lang === 'analysis') {
@@ -130,10 +156,6 @@ const CustomCode = ({ node, className, children, ...props }: any) => {
     }
 
     if (lang === 'svg') {
-        return <SvgBlock content={content} />;
-    }
-
-    if (!className && content.startsWith('<svg')) {
         return <SvgBlock content={content} />;
     }
 

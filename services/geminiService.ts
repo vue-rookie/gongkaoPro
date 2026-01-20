@@ -111,9 +111,12 @@ export const generateQuiz = async (mode: ExamMode, topic?: string, count: number
           1. 返回纯 JSON 数组。
           2. 包含字段：id, question, options (数组), answer, analysis。
           ${isGraphicReasoning ? `
-          3. **图形推理**：
-             - 题干：描述后，必须用 \`\`\`svg ... \`\`\` 包裹 SVG 代码。
-             - 选项：必须是 "A. <svg>...</svg>" 格式。
+          3. **图形推理强制要求**：
+             - **题干**：描述规律后，必须用 \`\`\`svg ... \`\`\` 包裹 SVG 代码。
+             - **选项**：\`options\` 数组中的每一项**必须是 SVG 代码字符串**。
+             - **选项格式**：例如 ["A. <svg>...</svg>", "B. <svg>...</svg>", "C. <svg>...</svg>", "D. <svg>...</svg>"]。
+             - **严禁**使用文字描述（如“A. 一个黑点”）作为选项，必须画出来。
+             - 保持 SVG 简洁，viewBox 建议 "0 0 100 100"。
           ` : ''}
         `;
     }

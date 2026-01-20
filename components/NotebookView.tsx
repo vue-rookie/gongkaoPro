@@ -46,6 +46,19 @@ const NotebookView: React.FC<Props> = ({
     setConfirmState({ isOpen: true, title, message, action });
   };
 
+  // Helper to strip markdown/code for clean preview
+  const getPreviewText = (text: string) => {
+    if (!text) return '';
+    // Remove markdown code blocks (```...```)
+    let clean = text.replace(/```[\s\S]*?```/g, '');
+    // Remove HTML tags
+    clean = clean.replace(/<[^>]*>/g, '');
+    // Remove markdown symbols
+    clean = clean.replace(/[*#`_~\[\]]/g, '');
+    // Collapse whitespace
+    return clean.replace(/\s+/g, ' ').trim();
+  };
+
   // --- DATA FILTERING ---
   
   // 1. All bookmarked messages for current mode
@@ -206,6 +219,11 @@ const NotebookView: React.FC<Props> = ({
                                                       // Determine correctness for display
                                                       const optLabel = opt.split('.')[0].trim();
                                                       const isCorrect = optLabel === q.answer || opt.startsWith(q.answer);
+
+                                                      // Clean and check content for SVG
+                                                      let optionContent = opt.substring(opt.indexOf('.') + 1).trim();
+                                                      optionContent = optionContent.replace(/```svg/gi, '').replace(/```/g, '').trim();
+                                                      const isSvgOption = optionContent.startsWith('<svg');
                                                       
                                                       return (
                                                           <div key={i} className={`p-3 rounded-xl text-sm border flex items-center justify-between ${
@@ -213,8 +231,15 @@ const NotebookView: React.FC<Props> = ({
                                                               ? 'bg-green-50 border-green-200 text-green-800 font-bold ring-1 ring-green-100' 
                                                               : 'bg-white border-gray-100 text-gray-600 opacity-70'
                                                           }`}>
-                                                              <span>{opt}</span>
-                                                              {isCorrect && <CheckCircle2 size={16} className="text-green-600" />}
+                                                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                                  <span className="flex-shrink-0 font-bold">{optLabel}.</span>
+                                                                  {isSvgOption ? (
+                                                                      <div className="w-16 h-16 sm:w-20 sm:h-20" dangerouslySetInnerHTML={{__html: optionContent}} />
+                                                                  ) : (
+                                                                      <span className="break-words">{optionContent || opt}</span>
+                                                                  )}
+                                                              </div>
+                                                              {isCorrect && <CheckCircle2 size={16} className="text-green-600 flex-shrink-0 ml-2" />}
                                                           </div>
                                                       );
                                                   })}
@@ -405,7 +430,9 @@ const NotebookView: React.FC<Props> = ({
                         <div className="grid grid-cols-1 gap-3">
                             {currentMessages.map(msg => {
                                 const isQuiz = msg.quizData && msg.quizData.length > 0;
-                                const title = isQuiz ? `[全真模拟卷] 内含 ${msg.quizData!.length} 道题目` : msg.text.replace(/[*#`]/g, '');
+                                const title = isQuiz 
+                                    ? `[全真模拟卷] 内含 ${msg.quizData!.length} 道题目` 
+                                    : getPreviewText(msg.text); // Use helper
 
                                 return (
                                     <div 
@@ -439,7 +466,7 @@ const NotebookView: React.FC<Props> = ({
                                     {isQuiz && (
                                         <div className="text-xs text-gray-500 mb-2 bg-gray-50 p-2 rounded-lg border border-gray-100 flex items-start gap-1.5 line-clamp-1">
                                             <HelpCircle size={12} className="flex-shrink-0 mt-0.5 text-gray-400" />
-                                            <span>Q1: {msg.quizData![0].question}</span>
+                                            <span>Q1: {getPreviewText(msg.quizData![0].question)}</span>
                                         </div>
                                     )}
 
