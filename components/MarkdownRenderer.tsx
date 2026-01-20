@@ -11,12 +11,7 @@ interface Props {
   className?: string;
 }
 
-// Separate plugins
-const remarkPlugins = [remarkMath, remarkGfm];
-const rehypePlugins = [rehypeRaw, [rehypeKatex, { strict: false, throwOnError: false }]];
-
-// --- Sub-components ---
-
+// Analysis Panel Component
 const AnalysisPanel = ({ content }: { content: string }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -64,6 +59,7 @@ const AnalysisPanel = ({ content }: { content: string }) => {
   );
 };
 
+// SVG Block Component
 const SvgBlock = ({ content }: { content: string }) => {
   const titleMatch = content.match(/<title.*?>(.*?)<\/title>/i);
   const description = titleMatch ? titleMatch[1] : 'AI 生成的图形推理演示';
@@ -95,7 +91,7 @@ const SvgBlock = ({ content }: { content: string }) => {
   );
 };
 
-// --- Custom Component Maps ---
+// --- Custom Component Definitions ---
 
 const CustomPre = ({ node, children, ...props }: any) => {
     // Attempt to extract the language from the child <code> element
@@ -149,7 +145,6 @@ const CustomCode = ({ node, className, children, ...props }: any) => {
     return <code className={`${className} font-mono text-sm`} {...props}>{children}</code>;
 };
 
-// Define components object
 const MARKDOWN_COMPONENTS = {
     h1: ({node, ...props}: any) => <h4 className="font-bold my-2 text-gray-900" {...props} />,
     h2: ({node, ...props}: any) => <h5 className="font-bold my-2 text-gray-900" {...props} />,
@@ -180,8 +175,8 @@ const MarkdownRenderer: React.FC<Props> = ({ content, className }) => {
   return (
     <div className={finalClass}>
       <ReactMarkdown
-        remarkPlugins={remarkPlugins as any}
-        rehypePlugins={rehypePlugins as any}
+        remarkPlugins={[remarkMath, remarkGfm]}
+        rehypePlugins={[rehypeRaw, [rehypeKatex, { strict: false, throwOnError: false }]]}
         components={MARKDOWN_COMPONENTS}
       >
         {content}

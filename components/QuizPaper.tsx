@@ -119,12 +119,8 @@ const QuizPaper: React.FC<Props> = ({ questions, mode }) => {
     const isThisCorrect = optionLabel === correctAnswer || option.startsWith(correctAnswer);
     const isThisSelected = userAnswer === optionLabel;
 
-    if (isThisCorrect) {
-      return "bg-green-50 border-green-500 text-green-700 ring-1 ring-green-500 font-bold";
-    }
-    if (isThisSelected && !isThisCorrect) {
-      return "bg-red-50 border-red-500 text-red-700 ring-1 ring-red-500";
-    }
+    if (isThisCorrect) return "bg-green-50 border-green-500 text-green-700 ring-1 ring-green-500 font-bold";
+    if (isThisSelected && !isThisCorrect) return "bg-red-50 border-red-500 text-red-700 ring-1 ring-red-500";
     return "opacity-50 border-gray-100 bg-gray-50 grayscale"; 
   };
 
@@ -135,11 +131,10 @@ const QuizPaper: React.FC<Props> = ({ questions, mode }) => {
     const ans = answers[q.id];
 
     if (isSubmitted) {
-      if (!q.options) return 'bg-gray-300'; // Non-MCQ in submitted state
+      if (!q.options) return 'bg-gray-300';
       if (ans === q.answer) return 'bg-green-400';
       return 'bg-red-400';
     } else {
-      // Not submitted
       if (ans) return 'bg-blue-300';
       return 'bg-gray-200';
     }
@@ -408,7 +403,9 @@ const QuizPaper: React.FC<Props> = ({ questions, mode }) => {
                     onClick={() => changePage(currentIndex + 1)}
                     disabled={isLast || !hasStarted}
                     className={`flex-1 md:flex-none flex items-center justify-center gap-1 px-4 py-2.5 rounded-lg text-sm font-bold transition-colors whitespace-nowrap ${
-                        isLast || !hasStarted ? 'text-blue-600 hover:bg-blue-50 bg-white border border-blue-100'
+                        isLast || !hasStarted 
+                            ? 'text-gray-300 cursor-not-allowed bg-gray-50' 
+                            : 'text-blue-600 hover:bg-blue-50 bg-white border border-blue-100'
                     }`}
                 >
                     下一题
