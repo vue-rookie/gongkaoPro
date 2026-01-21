@@ -61,7 +61,7 @@ const ChatInterface: React.FC<Props> = ({
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto'; 
       const scrollHeight = textareaRef.current.scrollHeight;
-      const newHeight = Math.min(Math.max(scrollHeight, 44), 120);
+      const newHeight = Math.min(Math.max(scrollHeight, 48), 160);
       textareaRef.current.style.height = `${newHeight}px`;
     }
   }, [inputText]);
@@ -86,7 +86,7 @@ const ChatInterface: React.FC<Props> = ({
     onSendMessage(inputText, selectedImage || undefined);
     setInputText('');
     setSelectedImage(null);
-    if (textareaRef.current) textareaRef.current.style.height = '44px';
+    if (textareaRef.current) textareaRef.current.style.height = '48px';
   };
 
   const handleQuizConfigStart = (topic: string, count: number) => {
@@ -133,17 +133,8 @@ const ChatInterface: React.FC<Props> = ({
     }
   };
 
-  const getModeColor = () => {
-     switch (currentMode) {
-      case ExamMode.XING_CE: return 'bg-indigo-600';
-      case ExamMode.SHEN_LUN: return 'bg-emerald-600';
-      case ExamMode.MIAN_SHI: return 'bg-amber-600';
-      default: return 'bg-blue-600';
-    }
-  };
-
   return (
-    <div className="absolute inset-0 flex flex-col bg-white md:rounded-t-2xl shadow-sm border-x border-t border-gray-100 overflow-hidden">
+    <div className="absolute inset-0 flex flex-col bg-[#fcfaf8] md:rounded-tl-2xl overflow-hidden">
       
       {/* Quiz Configuration Modal */}
       <QuizConfigModal 
@@ -166,254 +157,209 @@ const ChatInterface: React.FC<Props> = ({
       />
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-6 scroll-smooth">
-        {messages.length === 0 && (
-          <div className="h-full flex flex-col items-center justify-center p-4 text-center">
-             <div className={`w-16 h-16 rounded-2xl ${getModeColor()} bg-opacity-10 flex items-center justify-center mb-4 animate-bounce-slow`}>
-                <Bot size={32} className={`text-${currentMode === 'SHEN_LUN' ? 'emerald' : currentMode === 'MIAN_SHI' ? 'amber' : 'indigo'}-600`} />
-             </div>
-             <h3 className="text-lg font-bold text-gray-800 mb-2">我是你的公考助手</h3>
-             <p className="text-sm text-gray-500 max-w-xs mb-8">
-                基于 Gemini 3 · 内置真题库 · 深度解析<br/>
-                <span className="text-xs text-gray-400 mt-1 block">精通{currentMode === 'XING_CE' ? '行测逻辑与数学' : currentMode === 'SHEN_LUN' ? '申论写作与政策' : '面试技巧与模拟'}</span>
-             </p>
-             
-             <div className="grid grid-cols-1 gap-2 w-full max-w-sm">
-                {getSuggestions().map((s, i) => (
-                  <button 
-                    key={i} 
-                    onClick={() => setInputText(s)}
-                    className="group flex items-center justify-between text-sm bg-gray-50 border border-gray-100 px-4 py-3 rounded-xl hover:bg-blue-50 hover:border-blue-100 hover:text-blue-700 transition-all text-left shadow-sm"
-                  >
-                    <span>{s}</span>
-                    <Sparkles size={14} className="opacity-0 group-hover:opacity-100 text-blue-500 transition-opacity" />
-                  </button>
-                ))}
-             </div>
-          </div>
-        )}
-
-        {messages.map((msg) => {
-          if (msg.isSystem) {
-             return (
-               <div key={msg.id} className="flex justify-center py-2 animate-in fade-in zoom-in-95 duration-300">
-                 <div className="flex items-center gap-1.5 px-3 py-1 bg-gray-100 border border-gray-200 rounded-full">
-                    <ArrowLeftRight size={12} className="text-gray-400" />
-                    <span className="text-[11px] font-medium text-gray-500">{msg.text}</span>
+      <div className="flex-1 overflow-y-auto scroll-smooth scrollbar-hide">
+        {/* Content Wrapper for Alignment - Matches Input Box Width (max-w-3xl) */}
+        <div className="w-full max-w-3xl mx-auto px-4 py-6 space-y-8 min-h-full">
+            
+            {messages.length === 0 && (
+              <div className="h-full flex flex-col items-center justify-center p-4 text-center min-h-[50vh]">
+                 <div className="w-16 h-16 rounded-2xl bg-stone-100 flex items-center justify-center mb-6">
+                    <Sparkles size={28} className="text-stone-400" />
                  </div>
-               </div>
-             );
-          }
+                 <h3 className="text-xl font-serif font-bold text-stone-800 mb-2">公考智囊</h3>
+                 <p className="text-stone-500 max-w-sm mb-10 leading-relaxed text-sm">
+                    您的全能备考助手。<br/>
+                    精通{currentMode === 'XING_CE' ? '行测逻辑与数学' : currentMode === 'SHEN_LUN' ? '申论写作与政策' : '面试技巧与模拟'}，随时为您解答。
+                 </p>
+                 
+                 <div className="grid grid-cols-1 gap-3 w-full max-w-md">
+                    {getSuggestions().map((s, i) => (
+                      <button 
+                        key={i} 
+                        onClick={() => setInputText(s)}
+                        className="text-sm bg-white border border-stone-200 px-5 py-3 rounded-xl hover:bg-stone-50 hover:border-stone-300 transition-all text-left shadow-sm text-stone-600"
+                      >
+                        {s}
+                      </button>
+                    ))}
+                 </div>
+              </div>
+            )}
 
-          const isEditing = editingNoteId === msg.id;
+            {messages.map((msg) => {
+              if (msg.isSystem) {
+                 return (
+                   <div key={msg.id} className="flex justify-center py-4 animate-in fade-in zoom-in-95 duration-300">
+                     <span className="text-xs font-medium text-stone-400 tracking-wider uppercase px-2 bg-[#fcfaf8] z-10">{msg.text}</span>
+                     <div className="absolute w-full border-t border-stone-100 top-1/2 left-0 -z-0"></div>
+                   </div>
+                 );
+              }
 
-          return (
-            <div
-              key={msg.id}
-              className={`flex w-full group ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div className={`flex flex-col max-w-[100%] md:max-w-[90%] gap-1 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-                
-                <div className={`flex gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'} w-full`}>
-                    <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center shadow-sm mt-auto ${
-                    msg.role === 'user' 
-                        ? 'bg-gradient-to-br from-blue-500 to-blue-700 text-white' 
-                        : 'bg-white border border-gray-100 text-blue-600'
-                    }`}>
-                        {msg.role === 'user' ? <div className="text-xs font-bold">ME</div> : <Sparkles size={16} />}
+              const isEditing = editingNoteId === msg.id;
+
+              return (
+                <div
+                  key={msg.id}
+                  className={`flex w-full group ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div className={`flex flex-col max-w-[100%] gap-2 ${msg.role === 'user' ? 'items-end' : 'items-start w-full'}`}>
+                    
+                    <div className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'} w-full`}>
+                        
+                        {/* Avatars */}
+                        <div className={`flex-shrink-0 w-8 h-8 rounded mt-1 flex items-center justify-center ${
+                        msg.role === 'user' 
+                            ? 'bg-stone-200 text-stone-600' 
+                            : 'bg-transparent text-stone-800'
+                        }`}>
+                            {msg.role === 'user' ? <div className="text-xs font-bold">ME</div> : <Sparkles size={20} className="fill-stone-800" />}
+                        </div>
+
+                        <div className="flex flex-col min-w-0 flex-1 max-w-full">
+                        {/* Render QuizPaper if quizData exists */}
+                        {msg.quizData ? (
+                            <QuizPaper questions={msg.quizData} mode={msg.mode || ExamMode.XING_CE} />
+                        ) : (
+                            <div
+                                className={`text-[15px] leading-relaxed break-words relative ${
+                                msg.role === 'user'
+                                    ? 'bg-[#f0f0ed] text-stone-800 rounded-xl px-4 py-2.5 max-w-fit ml-auto'
+                                    : 'text-stone-800 w-full font-serif-sc'
+                                } ${msg.isBookmarked ? 'ring-2 ring-amber-200 ring-offset-2 ring-offset-[#fcfaf8] rounded' : ''}`}
+                            >
+                                {msg.image && (
+                                <div className="mb-3 overflow-hidden rounded-lg border border-stone-200">
+                                    <img 
+                                    src={msg.image} 
+                                    alt="User upload" 
+                                    className="max-w-full h-auto max-h-60 object-contain mx-auto" 
+                                    />
+                                </div>
+                                )}
+                                {msg.role === 'model' ? (
+                                    <MarkdownRenderer content={msg.text} />
+                                ) : (
+                                    <div className="whitespace-pre-wrap font-sans">{msg.text}</div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Action Bar */}
+                        <div className={`flex items-center gap-1 mt-1 transition-opacity ${
+                            msg.role === 'user' ? 'justify-end pr-1' : 'justify-start pl-1'
+                        } opacity-0 group-hover:opacity-100`}>
+                            
+                            <button 
+                                onClick={() => handleBookmarkClick(msg.id)}
+                                className={`p-1.5 rounded transition-colors ${
+                                    msg.isBookmarked 
+                                        ? 'text-amber-600 bg-amber-50' 
+                                        : 'text-stone-400 hover:text-amber-600 hover:bg-stone-100'
+                                }`}
+                                title={msg.isBookmarked ? "已收藏" : "加入笔记本"}
+                            >
+                                <Star size={14} className={msg.isBookmarked ? "fill-current" : ""} />
+                            </button>
+
+                            <button 
+                                onClick={() => startEditingNote(msg)}
+                                className={`p-1.5 rounded transition-colors ${
+                                    msg.note 
+                                        ? 'text-stone-800 bg-stone-200' 
+                                        : 'text-stone-400 hover:text-stone-800 hover:bg-stone-100'
+                                }`}
+                                title="添加笔记"
+                            >
+                                <PenLine size={14} />
+                            </button>
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="flex flex-col min-w-0 flex-1 max-w-full">
-                    {/* Render QuizPaper if quizData exists */}
-                    {msg.quizData ? (
-                        <QuizPaper questions={msg.quizData} mode={msg.mode || ExamMode.XING_CE} />
-                    ) : (
-                        <div
-                            className={`px-4 py-3 shadow-sm text-[15px] leading-relaxed break-words relative ${
-                            msg.role === 'user'
-                                ? 'bg-blue-600 text-white rounded-2xl rounded-br-none max-w-fit ml-auto'
-                                : 'bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-bl-none overflow-x-auto w-full'
-                            } ${msg.isBookmarked ? 'ring-2 ring-amber-200 ring-offset-1' : ''}`}
-                        >
-                            {msg.image && (
-                            <div className="mb-3 overflow-hidden rounded-lg bg-black/5">
-                                <img 
-                                src={msg.image} 
-                                alt="User upload" 
-                                className="max-w-full h-auto max-h-60 object-contain mx-auto" 
-                                />
+                    {/* Sticky Note */}
+                    {(msg.note || isEditing) && (
+                        <div className={`relative mt-1 ml-12 max-w-sm w-full animate-in slide-in-from-top-1 fade-in duration-300 ${msg.role === 'user' ? 'mr-12 ml-auto' : ''}`}>
+                            <div className="bg-[#fff9e6] border border-[#f5e6b3] rounded-lg p-3 shadow-sm text-sm relative text-stone-700">
+                                {isEditing ? (
+                                    <div className="flex flex-col gap-2">
+                                        <textarea
+                                            value={tempNoteContent}
+                                            onChange={(e) => setTempNoteContent(e.target.value)}
+                                            placeholder="输入笔记..."
+                                            className="w-full bg-transparent border-b border-[#e6d5a0] focus:border-stone-400 p-1 text-sm focus:outline-none min-h-[60px] resize-none"
+                                            autoFocus
+                                        />
+                                        <div className="flex justify-end gap-2">
+                                            <button 
+                                                onClick={() => setEditingNoteId(null)}
+                                                className="text-xs text-stone-500 hover:text-stone-700 px-2"
+                                            >
+                                                取消
+                                            </button>
+                                            <button 
+                                                onClick={() => saveNote(msg.id)}
+                                                className="text-xs bg-stone-800 text-white px-3 py-1 rounded hover:bg-black transition-colors"
+                                            >
+                                                保存
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div 
+                                        className="cursor-pointer hover:opacity-80 flex gap-2"
+                                        onClick={() => startEditingNote(msg)}
+                                    >
+                                        <StickyNote size={14} className="text-[#d4c07b] flex-shrink-0 mt-0.5" />
+                                        <span className="font-serif italic">{msg.note}</span>
+                                    </div>
+                                )}
                             </div>
-                            )}
-                            {msg.role === 'model' ? (
-                                <MarkdownRenderer content={msg.text} />
-                            ) : (
-                                <div className="whitespace-pre-wrap">{msg.text}</div>
-                            )}
                         </div>
                     )}
-
-                    {/* Action Bar */}
-                    <div className={`flex items-center gap-1 mt-1 px-1 transition-opacity ${
-                        msg.role === 'user' ? 'justify-end' : 'justify-start'
-                    } opacity-0 group-hover:opacity-100`}>
-                        
-                        <span className="text-[10px] text-gray-400 mr-2 flex items-center gap-2">
-                           {msg.mode && (
-                              <span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 border border-gray-200 flex items-center gap-0.5">
-                                 <Tag size={10} />
-                                 {MODE_LABELS[msg.mode]}
-                              </span>
-                           )}
-                           {new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                        </span>
-
-                        <button 
-                            onClick={() => handleBookmarkClick(msg.id)}
-                            className={`p-1 rounded-md transition-colors ${
-                                msg.isBookmarked 
-                                    ? 'text-amber-500 bg-amber-50 hover:bg-amber-100' 
-                                    : 'text-gray-400 hover:text-amber-500 hover:bg-gray-100'
-                            }`}
-                            title={msg.isBookmarked ? "已收藏（点击修改分类）" : "加入笔记本"}
-                        >
-                            <Star size={14} className={msg.isBookmarked ? "fill-amber-500" : ""} />
-                        </button>
-
-                        <button 
-                            onClick={() => startEditingNote(msg)}
-                            className={`p-1 rounded-md transition-colors ${
-                                msg.note 
-                                    ? 'text-blue-500 bg-blue-50 hover:bg-blue-100' 
-                                    : 'text-gray-400 hover:text-blue-500 hover:bg-gray-100'
-                            }`}
-                            title="添加/编辑笔记"
-                        >
-                            <PenLine size={14} />
-                        </button>
-                    </div>
                   </div>
                 </div>
+              );
+            })}
 
-                {/* Sticky Note */}
-                {(msg.note || isEditing) && (
-                    <div className={`relative mt-1 ml-10 max-w-sm w-full animate-in slide-in-from-top-2 fade-in duration-300 ${msg.role === 'user' ? 'mr-10 ml-auto' : ''}`}>
-                        <div className={`absolute -top-2 w-0.5 h-3 bg-yellow-200 ${msg.role === 'user' ? 'right-6' : 'left-6'}`}></div>
-                        
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 shadow-sm text-sm relative">
-                            <div className="absolute top-2 right-2 text-yellow-300">
-                                <StickyNote size={16} />
-                            </div>
-                            
-                            {isEditing ? (
-                                <div className="flex flex-col gap-2">
-                                    <textarea
-                                        value={tempNoteContent}
-                                        onChange={(e) => setTempNoteContent(e.target.value)}
-                                        placeholder="输入笔记（例如：重点公式、易错点...）"
-                                        className="w-full bg-white/50 border border-yellow-200 rounded p-2 text-gray-700 text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400 min-h-[60px]"
-                                        autoFocus
-                                    />
-                                    <div className="flex justify-end gap-2">
-                                        <button 
-                                            onClick={() => setEditingNoteId(null)}
-                                            className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1"
-                                        >
-                                            取消
-                                        </button>
-                                        <button 
-                                            onClick={() => saveNote(msg.id)}
-                                            className="flex items-center gap-1 text-xs bg-yellow-400 hover:bg-yellow-500 text-yellow-900 px-3 py-1 rounded-md font-medium transition-colors"
-                                        >
-                                            <Check size={12} />
-                                            保存
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div 
-                                    className="pr-6 text-gray-700 whitespace-pre-wrap cursor-pointer hover:text-gray-900"
-                                    onClick={() => startEditingNote(msg)}
-                                    title="点击编辑笔记"
-                                >
-                                    <span className="font-bold text-yellow-700 text-xs block mb-1">我的笔记：</span>
-                                    {msg.note}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
+            {/* Loading States */}
+            {(isLoading || isQuizLoading) && (
+              <div className="flex justify-start w-full animate-pulse pl-12">
+                   <div className="bg-white border border-stone-100 px-5 py-4 rounded-2xl rounded-bl-none shadow-sm flex items-center gap-3">
+                     {isQuizLoading ? (
+                         <div className="flex items-center gap-2 text-stone-600">
+                            <ScrollText size={18} className="animate-pulse" />
+                            <span className="text-sm font-medium font-serif">正在准备全真模拟卷...</span>
+                         </div>
+                     ) : (
+                         <div className="flex gap-1">
+                            <div className="w-1.5 h-1.5 bg-stone-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
+                            <div className="w-1.5 h-1.5 bg-stone-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
+                            <div className="w-1.5 h-1.5 bg-stone-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
+                         </div>
+                     )}
+                   </div>
               </div>
-            </div>
-          );
-        })}
-
-        {/* Loading States */}
-        {(isLoading || isQuizLoading) && (
-          <div className="flex justify-start w-full animate-pulse">
-             <div className="flex max-w-[80%] gap-2">
-               <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white border border-gray-100 flex items-center justify-center text-blue-600 shadow-sm mt-auto">
-                 <Sparkles size={16} />
-               </div>
-               <div className="bg-white border border-gray-100 px-5 py-4 rounded-2xl rounded-bl-none shadow-sm flex items-center gap-3">
-                 {isQuizLoading ? (
-                     <div className="flex items-center gap-2 text-gray-600">
-                        <ScrollText size={18} className="animate-pulse" />
-                        <span className="text-sm font-medium">正在AI生成模拟卷...</span>
-                     </div>
-                 ) : (
-                     <div className="flex gap-1">
-                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
-                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
-                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
-                     </div>
-                 )}
-               </div>
-             </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} className="h-px w-full" />
+            )}
+            <div ref={messagesEndRef} className="h-4 w-full" />
+        </div>
       </div>
 
       {/* Input Area */}
-      <div className="flex-shrink-0 bg-white border-t border-gray-100 z-10 w-full">
-            <div className="w-full max-w-5xl mx-auto p-3 md:p-4 pb-[calc(12px+env(safe-area-inset-bottom))] md:pb-6">
+      <div className="flex-shrink-0 z-10 w-full bg-[#fcfaf8] pb-4">
+            <div className="w-full max-w-3xl mx-auto px-4">
             
             {selectedImage && (
-                <div className="relative mb-3 inline-block group animate-in slide-in-from-bottom-5 fade-in duration-300">
-                <div className="absolute -top-2 -right-2 bg-white rounded-full shadow-md z-10 cursor-pointer hover:bg-red-50" onClick={() => setSelectedImage(null)}>
-                    <X size={20} className="text-gray-500 hover:text-red-500 p-0.5" />
-                </div>
-                <img src={selectedImage} alt="Preview" className="h-20 w-auto object-cover rounded-xl border border-gray-200 shadow-sm" />
+                <div className="relative mb-2 inline-block group animate-in slide-in-from-bottom-2 fade-in duration-300">
+                    <div className="absolute -top-2 -right-2 bg-stone-800 text-white rounded-full p-0.5 cursor-pointer shadow-md" onClick={() => setSelectedImage(null)}>
+                        <X size={14} />
+                    </div>
+                    <img src={selectedImage} alt="Preview" className="h-16 w-auto object-cover rounded-lg border border-stone-200 shadow-sm" />
                 </div>
             )}
 
-            <div className="flex items-end gap-2 bg-gray-50 p-1.5 rounded-[26px] border border-gray-200 focus-within:ring-2 focus-within:ring-blue-100 focus-within:border-blue-400 transition-all shadow-inner">
-                {/* Quiz Button */}
-                <button
-                    onClick={() => setIsQuizConfigOpen(true)}
-                    className="p-2 text-amber-500 hover:text-amber-600 hover:bg-amber-50 rounded-full transition-colors flex-shrink-0 h-[44px] w-[44px] flex items-center justify-center relative group"
-                    title="生成刷题试卷"
-                >
-                    <ScrollText size={22} />
-                </button>
-
-                <div className="w-px h-6 bg-gray-200 my-auto"></div>
-
-                <input
-                    type="file"
-                    accept="image/*"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    className="hidden"
-                />
-                <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors flex-shrink-0 h-[44px] w-[44px] flex items-center justify-center"
-                    title="上传题目"
-                >
-                    {selectedImage ? <ImageIcon size={22} className="text-blue-600" /> : <Plus size={24} />}
-                </button>
-
+            {/* Claude-style Input Box */}
+            <div className="relative bg-white rounded-2xl border border-stone-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] focus-within:shadow-[0_4px_12px_rgba(0,0,0,0.08)] focus-within:border-stone-300 transition-all duration-300">
                 <textarea
                     ref={textareaRef}
                     value={inputText}
@@ -421,21 +367,55 @@ const ChatInterface: React.FC<Props> = ({
                     onKeyDown={handleKeyDown}
                     rows={1}
                     placeholder={currentMode === ExamMode.XING_CE ? "来道真题或输入题目..." : "输入申论主题或面试问题..."}
-                    className="flex-1 bg-transparent border-none focus:ring-0 resize-none py-2.5 px-1 text-[15px] outline-none text-gray-800 placeholder:text-gray-400 leading-6"
-                    style={{ minHeight: '44px', maxHeight: '120px' }}
+                    className="w-full bg-transparent border-none focus:ring-0 resize-none py-4 pl-4 pr-12 text-[16px] outline-none text-stone-800 placeholder:text-stone-400 leading-6 max-h-[200px]"
+                    style={{ minHeight: '56px' }}
                 />
 
-                <button
-                    onClick={handleSend}
-                    disabled={(!inputText.trim() && !selectedImage) || isLoading || isQuizLoading}
-                    className={`rounded-full flex-shrink-0 transition-all duration-200 h-[44px] w-[44px] flex items-center justify-center ${
-                        (!inputText.trim() && !selectedImage) || isLoading || isQuizLoading
-                        ? 'bg-gray-200 text-gray-400'
-                        : 'bg-blue-600 text-white shadow-md hover:bg-blue-700 hover:scale-105 active:scale-95'
-                    }`}
-                >
-                    {(isLoading || isQuizLoading) ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} className={(!inputText.trim() && !selectedImage) ? "ml-0.5" : "ml-0.5 translate-x-[-1px]"} />}
-                </button>
+                <div className="flex items-center justify-between px-2 pb-2">
+                    <div className="flex gap-1">
+                        <button
+                            onClick={() => setIsQuizConfigOpen(true)}
+                            className="p-2 text-stone-400 hover:text-amber-600 hover:bg-stone-50 rounded-lg transition-colors flex items-center gap-1 group"
+                            title="生成试卷"
+                        >
+                            <ScrollText size={18} />
+                            <span className="text-xs font-medium hidden group-hover:block animate-in fade-in slide-in-from-left-1">模拟考</span>
+                        </button>
+                        
+                        <input
+                            type="file"
+                            accept="image/*"
+                            ref={fileInputRef}
+                            onChange={handleFileChange}
+                            className="hidden"
+                        />
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-50 rounded-lg transition-colors"
+                            title="上传图片"
+                        >
+                            <ImageIcon size={18} />
+                        </button>
+                    </div>
+
+                    <button
+                        onClick={handleSend}
+                        disabled={(!inputText.trim() && !selectedImage) || isLoading || isQuizLoading}
+                        className={`p-2 rounded-lg transition-all duration-200 ${
+                            (!inputText.trim() && !selectedImage) || isLoading || isQuizLoading
+                            ? 'bg-stone-100 text-stone-300 cursor-not-allowed'
+                            : 'bg-[#da7756] text-white shadow-md hover:bg-[#c66342]'
+                        }`}
+                    >
+                        {(isLoading || isQuizLoading) ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                    </button>
+                </div>
+            </div>
+            
+            <div className="text-center mt-2">
+                <p className="text-[10px] text-stone-300">
+                    AI 可能产生错误信息，请以官方教材为准
+                </p>
             </div>
             </div>
       </div>

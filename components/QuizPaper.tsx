@@ -63,10 +63,30 @@ const QuizPaper: React.FC<Props> = ({ questions, mode }) => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleOptionClick = (option: string) => {
+  // Improved Option Parser to handle various AI output formats
+  const parseOption = (opt: string) => {
+    // Regex matches: Start of string -> (Letter) -> optional space -> (separator: . or ．or 、) -> optional space -> (Rest)
+    const match = opt.match(/^([A-Z])\s*[.．、]\s*(.*)/s);
+    if (match) {
+        return { label: match[1], content: match[2].trim() };
+    }
+    // Fallback: If no label found, return empty label and full content
+    return { label: '', content: opt };
+  };
+
+  // ROBUST HELPER: Determines the definitive Label (A, B, C...) for an option
+  const getOptionLabel = (optRaw: string, index: number) => {
+      const { label } = parseOption(optRaw);
+      return label || String.fromCharCode(65 + index); // Fallback to A, B, C... based on index
+  };
+
+  const handleOptionClick = (optionRaw: string, index: number) => {
     if (isSubmitted || !hasStarted || isEssayType) return; 
-    const optionLabel = option.split('.')[0].trim(); 
-    setAnswers(prev => ({ ...prev, [currentQ.id]: optionLabel }));
+    
+    // Use robust label derivation
+    const label = getOptionLabel(optionRaw, index);
+    
+    setAnswers(prev => ({ ...prev, [currentQ.id]: label }));
   };
 
   const handleTextAnswerChange = (text: string) => {
@@ -104,39 +124,40 @@ const QuizPaper: React.FC<Props> = ({ questions, mode }) => {
     }, 300);
   };
 
-  const getOptionStyle = (option: string) => {
-    const optionLabel = option.split('.')[0].trim();
+  const getOptionStyle = (optionRaw: string, index: number) => {
+    const optionLabel = getOptionLabel(optionRaw, index);
+    
     const userAnswer = answers[currentQ.id];
     
     if (!isSubmitted) {
         if (userAnswer === optionLabel) {
-            return "bg-blue-50 border-blue-500 text-blue-700 ring-1 ring-blue-500 font-bold shadow-md";
+            return "bg-[#fcf5f2] border-[#da7756] text-[#b04825] font-bold shadow-sm ring-1 ring-[#da7756]";
         }
-        return "hover:bg-gray-50 hover:border-blue-300 border-gray-200 hover:shadow-sm";
+        return "bg-white border-stone-200 hover:border-stone-400 hover:bg-stone-50 text-stone-600";
     }
 
     const correctAnswer = currentQ.answer || '';
-    const isThisCorrect = optionLabel === correctAnswer || option.startsWith(correctAnswer);
+    const isThisCorrect = optionLabel === correctAnswer || optionRaw.startsWith(correctAnswer);
     const isThisSelected = userAnswer === optionLabel;
 
-    if (isThisCorrect) return "bg-green-50 border-green-500 text-green-700 ring-1 ring-green-500 font-bold";
+    if (isThisCorrect) return "bg-emerald-50 border-emerald-500 text-emerald-800 ring-1 ring-emerald-500 font-bold";
     if (isThisSelected && !isThisCorrect) return "bg-red-50 border-red-500 text-red-700 ring-1 ring-red-500";
-    return "opacity-50 border-gray-100 bg-gray-50 grayscale"; 
+    return "opacity-50 border-stone-100 bg-stone-50 grayscale"; 
   };
 
   const getDotClass = (index: number) => {
-    if (index === currentIndex) return 'bg-blue-600 w-4';
+    if (index === currentIndex) return 'bg-stone-600 w-4';
     
     const q = questions[index];
     const ans = answers[q.id];
 
     if (isSubmitted) {
-      if (!q.options) return 'bg-gray-300';
-      if (ans === q.answer) return 'bg-green-400';
+      if (!q.options) return 'bg-stone-300';
+      if (ans === q.answer) return 'bg-emerald-400';
       return 'bg-red-400';
     } else {
-      if (ans) return 'bg-blue-300';
-      return 'bg-gray-200';
+      if (ans) return 'bg-stone-400';
+      return 'bg-stone-200';
     }
   };
 
@@ -144,13 +165,13 @@ const QuizPaper: React.FC<Props> = ({ questions, mode }) => {
 
   return (
     <div className="w-full my-6 font-sans perspective-1000 select-none">
-      <div className={`relative bg-[#fdfbf7] rounded-xl shadow-xl border border-stone-200 overflow-hidden flex flex-col transition-transform duration-500 ${isEssayType ? 'min-h-[600px]' : 'min-h-[450px]'}`}>
+      <div className={`relative bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden flex flex-col transition-transform duration-500 ${isEssayType ? 'min-h-[600px]' : 'min-h-[450px]'}`}>
         
         {/* Header */}
-        <div className={`border-b px-4 py-3 flex justify-between items-center relative transition-colors duration-300 ${isSubmitted ? 'bg-indigo-50 border-indigo-100' : 'bg-stone-100 border-stone-200'}`}>
-          <div className="flex items-center gap-2 font-bold text-stone-700">
+        <div className="border-b border-stone-100 px-4 py-3 flex justify-between items-center relative bg-[#fcfaf8]">
+          <div className="flex items-center gap-2 font-bold text-stone-700 font-serif">
              {isSubmitted ? (
-                 <div className="flex items-center gap-2 text-indigo-700">
+                 <div className="flex items-center gap-2 text-stone-800">
                      <FileCheck size={18} />
                      <span>成绩单</span>
                  </div>
@@ -164,12 +185,12 @@ const QuizPaper: React.FC<Props> = ({ questions, mode }) => {
 
           {isSubmitted ? (
              <div className="flex items-center gap-4">
-                 <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                 <div className="flex items-center gap-1.5 text-xs font-medium text-stone-400">
                     <Clock size={14} />
                     <span>用时: {formatTime(timeElapsed)}</span>
                  </div>
                  {!isEssayType && (
-                    <div className="flex items-center gap-1.5 text-lg font-bold text-orange-600 bg-white px-3 py-1 rounded-lg shadow-sm">
+                    <div className="flex items-center gap-1.5 text-lg font-bold text-emerald-600 bg-white px-3 py-1 rounded-lg border border-stone-100">
                         <Trophy size={18} />
                         <span>{score} / {total}</span>
                     </div>
@@ -177,11 +198,11 @@ const QuizPaper: React.FC<Props> = ({ questions, mode }) => {
              </div>
           ) : (
              <div className="flex items-center gap-3">
-                 <div className={`flex items-center gap-1.5 bg-white border border-stone-200 px-2 py-1 rounded text-stone-600 font-mono text-sm font-bold shadow-sm transition-colors ${hasStarted ? '' : 'opacity-50'}`}>
-                     <Clock size={14} className={timeElapsed > 300 && hasStarted ? "text-red-500 animate-pulse" : "text-blue-500"} />
+                 <div className={`flex items-center gap-1.5 bg-white border border-stone-200 px-2 py-1 rounded text-stone-600 font-mono text-sm font-bold transition-colors ${hasStarted ? '' : 'opacity-50'}`}>
+                     <Clock size={14} className={timeElapsed > 300 && hasStarted ? "text-red-500 animate-pulse" : "text-stone-400"} />
                      {formatTime(timeElapsed)}
                  </div>
-                 <div className="text-xs font-mono bg-stone-200/50 px-2 py-1 rounded text-stone-500">
+                 <div className="text-xs font-mono bg-stone-100 px-2 py-1 rounded text-stone-500">
                     {currentIndex + 1} / {total}
                  </div>
              </div>
@@ -193,18 +214,18 @@ const QuizPaper: React.FC<Props> = ({ questions, mode }) => {
             
             {/* Start Mask */}
             {!hasStarted && !isSubmitted && (
-                <div className="absolute inset-0 z-30 bg-white/60 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
-                    <div className="bg-white p-8 rounded-2xl shadow-xl border border-blue-100 max-w-sm w-full">
-                        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-600">
+                <div className="absolute inset-0 z-30 bg-[#fcfaf8]/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
+                    <div className="bg-white p-8 rounded-2xl shadow-xl border border-stone-100 max-w-sm w-full">
+                        <div className="w-16 h-16 bg-stone-100 rounded-full flex items-center justify-center mx-auto mb-4 text-stone-600">
                             <Clock size={32} />
                         </div>
-                        <h3 className="text-xl font-bold text-gray-800 mb-2">准备好了吗？</h3>
-                        <p className="text-gray-500 text-sm mb-6">
+                        <h3 className="text-xl font-bold text-stone-800 mb-2 font-serif">准备好了吗？</h3>
+                        <p className="text-stone-500 text-sm mb-6 font-serif">
                             共 {questions.length} 道题，{isEssayType ? '请认真阅读给定资料并作答。' : '点击下方按钮开始计时作答。'}
                         </p>
                         <button 
                             onClick={() => setHasStarted(true)}
-                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-blue-200 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
+                            className="w-full bg-stone-800 hover:bg-stone-900 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-stone-200 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
                         >
                             <Play size={20} className="fill-white" />
                             开始答题
@@ -222,12 +243,13 @@ const QuizPaper: React.FC<Props> = ({ questions, mode }) => {
             >
                 {/* Material Section */}
                 {hasMaterial && (
-                    <div className="bg-stone-50 border-b border-stone-200 p-4 md:p-6 max-h-[300px] overflow-y-auto shadow-inner">
-                        <div className="flex items-center gap-2 text-stone-800 font-bold mb-3 border-l-4 border-stone-400 pl-2">
+                    <div className="bg-[#f8f7f4] border-b border-stone-200 p-4 md:p-6 max-h-[300px] overflow-y-auto shadow-inner relative">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-[#e5e5e0]"></div>
+                        <div className="flex items-center gap-2 text-stone-800 font-bold mb-3 pl-2 font-serif">
                              <BookText size={18} />
                              <span>给定资料</span>
                         </div>
-                        <div className="prose prose-sm prose-stone max-w-none leading-relaxed text-justify text-stone-700">
+                        <div className="prose prose-sm prose-stone max-w-none leading-relaxed text-justify text-stone-700 font-serif-sc">
                              {currentQ.material?.split('\n').map((para, i) => (
                                  <p key={i} className="mb-2 last:mb-0 indent-8">{para}</p>
                              ))}
@@ -235,12 +257,12 @@ const QuizPaper: React.FC<Props> = ({ questions, mode }) => {
                     </div>
                 )}
 
-                <div className="p-4 md:p-6 flex-1 overflow-y-auto">
+                <div className="p-4 md:p-6 flex-1 overflow-y-auto bg-white">
                     {/* Question */}
                     <div className="mb-6">
                         <div className="flex gap-2 mb-4">
-                             <span className="text-blue-600 flex-shrink-0 font-bold text-lg mt-1">Q{currentIndex + 1}.</span>
-                             <div className="flex-1 text-gray-800 text-lg leading-relaxed font-bold">
+                             <span className="text-stone-400 flex-shrink-0 font-bold text-lg mt-1 font-serif">Q{currentIndex + 1}.</span>
+                             <div className="flex-1 text-stone-800 text-lg leading-relaxed font-bold font-serif-sc">
                                 <MarkdownRenderer content={processContent(currentQ.question)} className="prose-base" />
                              </div>
                         </div>
@@ -248,36 +270,42 @@ const QuizPaper: React.FC<Props> = ({ questions, mode }) => {
                         {/* Options */}
                         {!isEssayType && currentQ.options && currentQ.options.length > 0 && (
                             <div className={`grid gap-3 ${currentQ.options.some(o => o.includes('<svg')) ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                                {currentQ.options.map((opt, idx) => {
-                                    const optionLabel = opt.split('.')[0].trim();
+                                {currentQ.options.map((optRaw, idx) => {
+                                    // Robust Label Calculation
+                                    const displayLabel = getOptionLabel(optRaw, idx);
                                     
-                                    let optionContent = opt.substring(opt.indexOf('.') + 1).trim();
-                                    optionContent = optionContent.replace(/```svg/gi, '').replace(/```/g, '').trim();
-                                    
-                                    const isSvgOption = optionContent.startsWith('<svg');
+                                    // Parse content cleanly
+                                    let { content } = parseOption(optRaw);
+                                    let displayContent = content.replace(/```svg/gi, '').replace(/```/g, '').trim();
+                                    const isSvgOption = displayContent.startsWith('<svg');
                                     
                                     return (
                                         <button
                                             key={idx}
-                                            onClick={() => handleOptionClick(opt)}
+                                            onClick={() => handleOptionClick(optRaw, idx)}
                                             disabled={isSubmitted || !hasStarted}
-                                            className={`text-left p-4 rounded-lg border text-sm font-medium transition-all duration-200 flex items-center group relative overflow-hidden ${getOptionStyle(opt)}`}
+                                            // Font-sans and tabular-nums for perfect digit alignment
+                                            className={`w-full text-left p-4 rounded-lg border text-sm transition-all duration-200 flex items-baseline group relative overflow-hidden font-sans tabular-nums ${getOptionStyle(optRaw, idx)}`}
                                         >
-                                            <span className="mr-3 text-lg font-bold opacity-80 flex-shrink-0 w-6">{optionLabel}.</span>
+                                            <span className="mr-3 text-base font-bold opacity-80 flex-shrink-0 w-6 text-right leading-relaxed">
+                                                {displayLabel}.
+                                            </span>
                                             
-                                            <div className="flex-1 flex justify-center md:justify-start">
-                                                {isSvgOption ? (
-                                                    <div className="w-24 h-24 md:w-32 md:h-32 pointer-events-none" dangerouslySetInnerHTML={{__html: optionContent}} />
-                                                ) : (
-                                                    <span>{optionContent || opt}</span>
-                                                )}
-                                            </div>
+                                            {isSvgOption ? (
+                                                <div className="flex-1 flex justify-center md:justify-start">
+                                                    <div className="w-24 h-24 md:w-32 md:h-32 pointer-events-none" dangerouslySetInnerHTML={{__html: displayContent}} />
+                                                </div>
+                                            ) : (
+                                                <div className="flex-1 min-w-0 text-left break-words leading-relaxed">
+                                                    <span>{displayContent}</span>
+                                                </div>
+                                            )}
 
                                             {isSubmitted && (
                                                 <div className="absolute top-2 right-2">
-                                                    {(opt.startsWith(currentQ.answer || '') || optionLabel === currentQ.answer) 
-                                                    ? <CheckCircle2 size={20} className="text-green-600" />
-                                                    : (answers[currentQ.id] === optionLabel ? <XCircle size={20} className="text-red-500" /> : null)
+                                                    {(displayLabel === currentQ.answer || optRaw.startsWith(currentQ.answer || '')) 
+                                                    ? <CheckCircle2 size={20} className="text-emerald-600" />
+                                                    : (answers[currentQ.id] === displayLabel ? <XCircle size={20} className="text-red-500" /> : null)
                                                     }
                                                 </div>
                                             )}
@@ -296,15 +324,15 @@ const QuizPaper: React.FC<Props> = ({ questions, mode }) => {
                                         onChange={(e) => handleTextAnswerChange(e.target.value)}
                                         disabled={isSubmitted || !hasStarted}
                                         placeholder="请在此处输入您的作答..."
-                                        className="w-full min-h-[200px] p-4 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none leading-relaxed text-gray-700 disabled:bg-gray-50 disabled:text-gray-500"
+                                        className="w-full min-h-[200px] p-4 bg-[#fcfaf8] border border-stone-200 rounded-xl focus:ring-2 focus:ring-stone-200 focus:border-stone-400 outline-none resize-none leading-relaxed text-stone-700 disabled:bg-stone-50 disabled:text-stone-400 font-serif"
                                         spellCheck={false}
                                     />
-                                    <div className="absolute bottom-3 right-3 text-xs text-gray-400 pointer-events-none bg-white/80 px-1 rounded">
+                                    <div className="absolute bottom-3 right-3 text-xs text-stone-400 pointer-events-none bg-white/80 px-1 rounded font-mono">
                                         {(answers[currentQ.id] || '').length} 字
                                     </div>
                                 </div>
                                 {!isSubmitted && (
-                                    <p className="text-xs text-gray-400 flex items-center gap-1">
+                                    <p className="text-xs text-stone-400 flex items-center gap-1 font-sans">
                                         <PenTool size={12} />
                                         申论/面试为主观题，交卷后系统将提供参考范文供您自我批改。
                                     </p>
@@ -316,11 +344,11 @@ const QuizPaper: React.FC<Props> = ({ questions, mode }) => {
                     {/* Analysis */}
                     {isSubmitted && (
                         <div className="mt-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-4">
-                            <div className={`rounded-xl border p-5 shadow-sm relative overflow-hidden ${isEssayType ? 'bg-indigo-50 border-indigo-100' : 'bg-amber-50 border-amber-100'}`}>
-                                <div className="absolute top-0 right-0 p-2 opacity-10">
-                                    <Lightbulb size={64} className={isEssayType ? "text-indigo-500" : "text-amber-500"} />
+                            <div className={`rounded-xl border p-5 shadow-sm relative overflow-hidden bg-stone-50 border-stone-200`}>
+                                <div className="absolute top-0 right-0 p-2 opacity-5">
+                                    <Lightbulb size={64} className="text-stone-800" />
                                 </div>
-                                <h4 className={`font-bold text-sm mb-4 flex items-center gap-2 ${isEssayType ? 'text-indigo-800' : 'text-amber-800'}`}>
+                                <h4 className={`font-bold text-sm mb-4 flex items-center gap-2 text-stone-800 font-serif`}>
                                     <CheckCircle2 size={16} /> 
                                     {isEssayType ? '参考范文与解析' : '答案与解析'}
                                 </h4>
@@ -328,30 +356,30 @@ const QuizPaper: React.FC<Props> = ({ questions, mode }) => {
                                 {isEssayType ? (
                                     <div className="space-y-4">
                                         <div>
-                                            <span className="text-xs font-bold text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded uppercase mb-1 inline-block">Ref Answer</span>
-                                            <div className="prose prose-sm prose-indigo text-gray-800 bg-white p-4 rounded-lg border border-indigo-100">
+                                            <span className="text-xs font-bold text-stone-500 bg-stone-200 px-2 py-0.5 rounded uppercase mb-1 inline-block font-sans">参考范文</span>
+                                            <div className="prose prose-sm prose-stone text-stone-800 bg-white p-4 rounded-lg border border-stone-100 font-serif-sc">
                                                 <MarkdownRenderer content={currentQ.answer} />
                                             </div>
                                         </div>
                                         <div>
-                                            <span className="text-xs font-bold text-gray-500 bg-gray-200 px-2 py-0.5 rounded uppercase mb-1 inline-block">Analysis</span>
-                                            <div className="prose prose-sm text-gray-600">
+                                            <span className="text-xs font-bold text-stone-400 bg-stone-100 px-2 py-0.5 rounded uppercase mb-1 inline-block font-sans">名师解析</span>
+                                            <div className="prose prose-sm text-stone-600 font-serif-sc">
                                                 <MarkdownRenderer content={currentQ.analysis} />
                                             </div>
                                         </div>
                                     </div>
                                 ) : (
                                     <>
-                                        <div className="text-sm text-gray-800 leading-relaxed mb-2">
+                                        <div className="text-sm text-stone-800 leading-relaxed mb-2 font-serif">
                                             <span className="font-bold">参考答案：</span> {currentQ.answer}
                                         </div>
                                         {currentQ.options && (
-                                            <div className={`text-sm mb-3 font-bold ${answers[currentQ.id] === currentQ.answer ? 'text-green-600' : 'text-red-600'}`}>
+                                            <div className={`text-sm mb-3 font-bold font-serif ${answers[currentQ.id] === currentQ.answer ? 'text-emerald-600' : 'text-red-600'}`}>
                                                 你的选择：{answers[currentQ.id] || '未作答'}
                                             </div>
                                         )}
-                                        <div className="h-px bg-amber-200/50 my-3"></div>
-                                        <div className="prose prose-sm prose-amber text-gray-700">
+                                        <div className="h-px bg-stone-200 my-3"></div>
+                                        <div className="prose prose-sm prose-stone text-stone-700 font-serif-sc">
                                             <MarkdownRenderer content={processContent(currentQ.analysis)} />
                                         </div>
                                     </>
@@ -364,12 +392,12 @@ const QuizPaper: React.FC<Props> = ({ questions, mode }) => {
         </div>
 
         {/* Footer */}
-        <div className="bg-white border-t border-gray-100 p-4 flex justify-between items-center gap-4">
+        <div className="bg-white border-t border-stone-100 p-4 flex justify-between items-center gap-4 rounded-b-xl">
             <button
                 onClick={() => changePage(currentIndex - 1)}
                 disabled={isFirst || !hasStarted}
-                className={`flex-1 md:flex-none flex items-center justify-center gap-1 px-4 py-2.5 rounded-lg text-sm font-bold transition-colors whitespace-nowrap ${
-                    isFirst || !hasStarted ? 'text-gray-300 cursor-not-allowed bg-gray-50' : 'text-gray-600 hover:bg-gray-100 bg-white border border-gray-200'
+                className={`flex-1 md:flex-none flex items-center justify-center gap-1 px-4 py-2.5 rounded-lg text-sm font-bold transition-colors whitespace-nowrap font-serif ${
+                    isFirst || !hasStarted ? 'text-stone-300 cursor-not-allowed bg-stone-50' : 'text-stone-600 hover:bg-stone-100 bg-white border border-stone-200'
                 }`}
             >
                 <ChevronLeft size={18} />
@@ -393,7 +421,7 @@ const QuizPaper: React.FC<Props> = ({ questions, mode }) => {
                 <button
                     onClick={handleSubmitClick}
                     disabled={!hasStarted}
-                    className="flex-1 md:flex-none bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg font-bold shadow-md shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 md:flex-none bg-stone-800 hover:bg-stone-900 text-white px-6 py-2.5 rounded-lg font-bold shadow-md shadow-stone-200 transition-all active:scale-95 flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed font-serif"
                 >
                     <FileCheck size={18} />
                     现在交卷
@@ -402,10 +430,10 @@ const QuizPaper: React.FC<Props> = ({ questions, mode }) => {
                 <button
                     onClick={() => changePage(currentIndex + 1)}
                     disabled={isLast || !hasStarted}
-                    className={`flex-1 md:flex-none flex items-center justify-center gap-1 px-4 py-2.5 rounded-lg text-sm font-bold transition-colors whitespace-nowrap ${
+                    className={`flex-1 md:flex-none flex items-center justify-center gap-1 px-4 py-2.5 rounded-lg text-sm font-bold transition-colors whitespace-nowrap font-serif ${
                         isLast || !hasStarted 
-                            ? 'text-gray-300 cursor-not-allowed bg-gray-50' 
-                            : 'text-blue-600 hover:bg-blue-50 bg-white border border-blue-100'
+                            ? 'text-stone-300 cursor-not-allowed bg-stone-50' 
+                            : 'text-stone-600 hover:bg-stone-50 bg-white border border-stone-200'
                     }`}
                 >
                     下一题
@@ -415,7 +443,7 @@ const QuizPaper: React.FC<Props> = ({ questions, mode }) => {
         </div>
       </div>
       
-      <div className="absolute top-2 left-2 w-full h-full bg-stone-100 rounded-xl -z-10 border border-stone-200"></div>
+      <div className="absolute top-2 left-2 w-full h-full bg-[#f3f1eb] rounded-xl -z-10 border border-[#e5e5e0]"></div>
 
       <ConfirmationModal 
         isOpen={isConfirmOpen}

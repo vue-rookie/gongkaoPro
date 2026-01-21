@@ -55,8 +55,21 @@ const App: React.FC = () => {
   });
 
   const [isClearHistoryModalOpen, setIsClearHistoryModalOpen] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  
+  // Sidebar States
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
+
+  // Toggle Logic
+  const handleSidebarToggle = () => {
+      // Check viewport width to decide which state to toggle
+      if (window.innerWidth >= 768) { // md breakpoint
+          setIsDesktopSidebarOpen(prev => !prev);
+      } else {
+          setIsMobileMenuOpen(prev => !prev);
+      }
+  };
 
   // --- Data Sync Effect ---
   // 1. On Mount (or User Change), Load Data
@@ -381,7 +394,7 @@ const App: React.FC = () => {
                     messages: [],
                     categories: [],
                     sessions: [{ id: generateId(), title: '新对话', updatedAt: Date.now() }],
-                    currentSessionId: generateId(), // Temp placeholder, will be overwritten by state update
+                    currentSessionId: generateId(), 
                     currentMode: ExamMode.XING_CE
                 }
             })
@@ -472,7 +485,7 @@ const App: React.FC = () => {
   const activeMessages = chatState.messages.filter(m => m.sessionId === chatState.currentSessionId);
 
   return (
-    <div className="h-screen w-full bg-gray-50 flex flex-col font-sans text-gray-900 overflow-hidden">
+    <div className="h-screen w-full bg-[#fcfaf8] flex font-sans text-stone-800 overflow-hidden">
       <ConfirmationModal 
         isOpen={isClearHistoryModalOpen}
         onClose={() => setIsClearHistoryModalOpen(false)}
@@ -490,9 +503,11 @@ const App: React.FC = () => {
         onRegister={handleRegister}
       />
 
+      {/* Responsive Sidebar */}
       <HistorySidebar 
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
+        isMobileOpen={isMobileMenuOpen}
+        isDesktopOpen={isDesktopSidebarOpen}
+        onMobileClose={() => setIsMobileMenuOpen(false)}
         sessions={chatState.sessions}
         currentSessionId={chatState.currentSessionId}
         onSelectSession={handleSelectSession}
@@ -500,51 +515,57 @@ const App: React.FC = () => {
         onDeleteSession={handleDeleteSession}
       />
 
-      <Header 
-        user={chatState.currentUser}
-        onLoginClick={() => setIsAuthModalOpen(true)}
-        onLogoutClick={handleLogout}
-        onClearHistory={() => setIsClearHistoryModalOpen(true)} 
-        showFavoritesOnly={chatState.showFavoritesOnly}
-        onToggleFavorites={toggleFavoritesView}
-        onOpenSidebar={() => setIsSidebarOpen(true)}
-      />
-      
-      {chatState.showFavoritesOnly ? (
-         <main className="flex-1 relative w-full h-full overflow-hidden">
-            <NotebookView 
-              messages={chatState.messages}
-              categories={chatState.categories}
-              onCreateCategory={handleCreateCategory}
-              onDeleteCategory={handleDeleteCategory}
-              onRemoveMessage={handleRemoveMessage}
-              onUpdateNote={handleUpdateNote}
-            />
-         </main>
-      ) : (
-        <>
-          <div className="flex-shrink-0 z-10 bg-gray-50 pt-2 px-2 md:px-4 border-b border-transparent">
-            <ModeSelector 
-              currentMode={chatState.currentMode} 
-              onSelectMode={handleModeChange}
-              disabled={chatState.isLoading}
-            />
-          </div>
+      {/* Main Content Area - Flex Column */}
+      <div className="flex-1 flex flex-col h-full relative w-full overflow-hidden transition-all">
+          <Header 
+            user={chatState.currentUser}
+            onLoginClick={() => setIsAuthModalOpen(true)}
+            onLogoutClick={handleLogout}
+            onClearHistory={() => setIsClearHistoryModalOpen(true)} 
+            showFavoritesOnly={chatState.showFavoritesOnly}
+            onToggleFavorites={toggleFavoritesView}
+            onToggleSidebar={handleSidebarToggle}
+            isSidebarOpen={isDesktopSidebarOpen} // Only relevant for desktop icon choice really
+          />
+          
+          {chatState.showFavoritesOnly ? (
+             <main className="flex-1 relative w-full h-full overflow-hidden">
+                <NotebookView 
+                  messages={chatState.messages}
+                  categories={chatState.categories}
+                  onCreateCategory={handleCreateCategory}
+                  onDeleteCategory={handleDeleteCategory}
+                  onRemoveMessage={handleRemoveMessage}
+                  onUpdateNote={handleUpdateNote}
+                />
+             </main>
+          ) : (
+            <>
+              {/* Sticky Mode Selector */}
+              <div className="flex-shrink-0 z-10 bg-[#fcfaf8] pt-4 px-4 border-b border-transparent">
+                <ModeSelector 
+                  currentMode={chatState.currentMode} 
+                  onSelectMode={handleModeChange}
+                  disabled={chatState.isLoading}
+                />
+              </div>
 
-          <main className="flex-1 relative w-full max-w-5xl mx-auto">
-            <ChatInterface 
-              messages={activeMessages}
-              categories={chatState.categories} 
-              isLoading={chatState.isLoading}
-              onSendMessage={handleSendMessage}
-              currentMode={chatState.currentMode}
-              onSaveMessage={handleSaveMessage} 
-              onCreateCategory={(name) => handleCreateCategory(name, chatState.currentMode)} 
-              onUpdateNote={handleUpdateNote}
-            />
-          </main>
-        </>
-      )}
+              {/* Chat Area */}
+              <main className="flex-1 relative w-full mx-auto max-w-6xl">
+                <ChatInterface 
+                  messages={activeMessages}
+                  categories={chatState.categories} 
+                  isLoading={chatState.isLoading}
+                  onSendMessage={handleSendMessage}
+                  currentMode={chatState.currentMode}
+                  onSaveMessage={handleSaveMessage} 
+                  onCreateCategory={(name) => handleCreateCategory(name, chatState.currentMode)} 
+                  onUpdateNote={handleUpdateNote}
+                />
+              </main>
+            </>
+          )}
+      </div>
     </div>
   );
 };

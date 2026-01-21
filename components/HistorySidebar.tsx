@@ -1,10 +1,11 @@
 import React from 'react';
-import { MessageSquarePlus, MessageSquare, Trash2, X, Clock } from 'lucide-react';
+import { MessageSquarePlus, Trash2, X, Clock } from 'lucide-react';
 import { Session } from '../types';
 
 interface Props {
-  isOpen: boolean;
-  onClose: () => void;
+  isMobileOpen: boolean;
+  isDesktopOpen: boolean;
+  onMobileClose: () => void;
   sessions: Session[];
   currentSessionId: string;
   onSelectSession: (id: string) => void;
@@ -13,8 +14,9 @@ interface Props {
 }
 
 const HistorySidebar: React.FC<Props> = ({
-  isOpen,
-  onClose,
+  isMobileOpen,
+  isDesktopOpen,
+  onMobileClose,
   sessions,
   currentSessionId,
   onSelectSession,
@@ -31,63 +33,53 @@ const HistorySidebar: React.FC<Props> = ({
     return isToday ? date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : date.toLocaleDateString();
   };
 
-  return (
-    <>
-      {/* Backdrop */}
-      <div 
-        className={`fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-        onClick={onClose}
-      />
-
-      {/* Sidebar */}
-      <div 
-        className={`fixed top-0 left-0 h-full w-72 bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
-      >
-        <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-           <h2 className="font-bold text-gray-800 flex items-center gap-2">
-             <Clock size={18} className="text-blue-600" />
-             历史记录
+  // Shared Content for both Mobile and Desktop sidebars
+  const SidebarContent = ({ isMobile }: { isMobile: boolean }) => (
+    <div className="flex flex-col h-full bg-[#f3f1eb]">
+        <div className="p-4 flex items-center justify-between flex-shrink-0">
+           <h2 className="font-serif font-bold text-stone-700 flex items-center gap-2">
+             <Clock size={18} className="text-stone-500" />
+             <span className="tracking-wide">历史记录</span>
            </h2>
-           <button onClick={onClose} className="p-1.5 hover:bg-gray-200 rounded-lg text-gray-500 transition-colors">
-             <X size={18} />
-           </button>
+           {isMobile && (
+               <button onClick={onMobileClose} className="p-1.5 hover:bg-stone-200 rounded-lg text-stone-500 transition-colors">
+                 <X size={18} />
+               </button>
+           )}
         </div>
 
-        <div className="p-3">
+        <div className="px-3 mb-2 flex-shrink-0">
           <button
-            onClick={() => { onCreateSession(); onClose(); }}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 shadow-md shadow-blue-200 transition-all active:scale-95"
+            onClick={() => { onCreateSession(); if(isMobile) onMobileClose(); }}
+            className="w-full bg-stone-200 hover:bg-stone-300 text-stone-700 font-bold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition-all active:scale-95 text-sm"
           >
-            <MessageSquarePlus size={18} />
+            <MessageSquarePlus size={16} />
             开启新对话
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+        <div className="flex-1 overflow-y-auto px-2 space-y-1 py-2 scrollbar-hide">
           {sortedSessions.length === 0 ? (
-            <div className="text-center text-gray-400 py-10 text-sm">
+            <div className="text-center text-stone-400 py-10 text-xs">
               暂无历史记录
             </div>
           ) : (
             sortedSessions.map(session => (
               <div
                 key={session.id}
-                onClick={() => { onSelectSession(session.id); onClose(); }}
-                className={`group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all border ${
+                onClick={() => { onSelectSession(session.id); if(isMobile) onMobileClose(); }}
+                className={`group flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition-all border text-sm ${
                   currentSessionId === session.id
-                    ? 'bg-blue-50 border-blue-200 shadow-sm'
-                    : 'bg-white border-transparent hover:bg-gray-50 hover:border-gray-100'
+                    ? 'bg-white border-stone-200 shadow-sm'
+                    : 'bg-transparent border-transparent hover:bg-stone-200/50'
                 }`}
               >
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className={`p-2 rounded-lg ${currentSessionId === session.id ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'}`}>
-                    <MessageSquare size={16} />
-                  </div>
                   <div className="min-w-0 flex-1">
-                    <div className={`font-medium text-sm truncate ${currentSessionId === session.id ? 'text-blue-900' : 'text-gray-700'}`}>
+                    <div className={`font-medium truncate ${currentSessionId === session.id ? 'text-stone-900' : 'text-stone-600'}`}>
                       {session.title || '新对话'}
                     </div>
-                    <div className="text-[10px] text-gray-400 mt-0.5">
+                    <div className="text-[10px] text-stone-400 mt-0.5">
                       {formatDate(session.updatedAt)}
                     </div>
                   </div>
@@ -97,16 +89,49 @@ const HistorySidebar: React.FC<Props> = ({
                 {(sortedSessions.length > 1) && (
                     <button
                         onClick={(e) => { e.stopPropagation(); onDeleteSession(session.id, e); }}
-                        className={`p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors ${currentSessionId === session.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                        className={`p-1.5 rounded text-stone-400 hover:text-red-600 hover:bg-stone-200 transition-colors ${currentSessionId === session.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
                         title="删除对话"
                     >
-                        <Trash2 size={14} />
+                        <Trash2 size={12} />
                     </button>
                 )}
               </div>
             ))
           )}
         </div>
+        
+        {/* Footer decoration */}
+        <div className="p-4 border-t border-stone-200 text-center flex-shrink-0">
+             <div className="text-[10px] text-stone-400 font-serif italic">GongKao Pro v1.0</div>
+        </div>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Mobile Sidebar (Drawer Overlay) */}
+      <div className={`md:hidden fixed inset-0 z-50 transition-opacity duration-300 ${isMobileOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+          {/* Backdrop */}
+          <div 
+             className="absolute inset-0 bg-black/20 backdrop-blur-sm"
+             onClick={onMobileClose}
+          />
+          {/* Drawer */}
+          <div className={`absolute top-0 left-0 bottom-0 w-72 bg-[#f3f1eb] shadow-2xl transform transition-transform duration-300 ease-in-out ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+             <SidebarContent isMobile={true} />
+          </div>
+      </div>
+
+      {/* Desktop Sidebar (Collapsible Column) */}
+      <div 
+        className={`hidden md:flex flex-col bg-[#f3f1eb] border-r border-[#e5e5e0] transition-all duration-300 ease-in-out overflow-hidden ${
+          isDesktopOpen ? 'w-72 opacity-100' : 'w-0 opacity-0 border-none'
+        }`}
+      >
+          {/* Fixed width container to prevent content reflow during width transition */}
+          <div className="w-72 h-full flex flex-col">
+             <SidebarContent isMobile={false} />
+          </div>
       </div>
     </>
   );

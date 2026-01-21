@@ -111,19 +111,18 @@ const AuthModal: React.FC<Props> = ({ isOpen, onClose, onLogin, onRegister }) =>
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-blue-900/20 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col md:flex-row animate-in zoom-in-95 duration-300 m-4">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="bg-[#fcfaf8] rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col md:flex-row animate-in zoom-in-95 duration-300 m-4 border border-stone-200">
         
         {/* Left Side (Decorative) - Hidden on mobile */}
-        <div className="hidden md:flex w-1/3 bg-gradient-to-br from-blue-600 to-indigo-700 p-6 flex-col justify-between text-white relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+        <div className="hidden md:flex w-1/3 bg-[#f3f1eb] p-6 flex-col justify-between text-stone-800 relative overflow-hidden border-r border-stone-200">
           <div className="z-10">
-             <div className="bg-white/20 w-10 h-10 rounded-xl flex items-center justify-center backdrop-blur-md mb-4">
-                <GraduationCap size={24} className="text-white" />
+             <div className="bg-stone-200 w-10 h-10 rounded-xl flex items-center justify-center mb-4">
+                <GraduationCap size={24} className="text-stone-600" />
              </div>
-             <h3 className="font-bold text-xl leading-tight">公考智囊<br/><span className="text-blue-200 text-sm font-normal">GongKao Pro</span></h3>
+             <h3 className="font-bold text-xl leading-tight font-serif">公考智囊<br/><span className="text-stone-400 text-sm font-normal font-sans">GongKao Pro</span></h3>
           </div>
-          <div className="z-10 text-xs text-blue-100 opacity-80 leading-relaxed">
+          <div className="z-10 text-xs text-stone-500 leading-relaxed font-serif">
              {isLoginView ? "登录以同步您的学习进度、错题本和模拟考记录。" : "注册账号，开启您的智能备考之旅。"}
           </div>
         </div>
@@ -132,14 +131,14 @@ const AuthModal: React.FC<Props> = ({ isOpen, onClose, onLogin, onRegister }) =>
         <div className="flex-1 p-6 md:p-8 relative">
           <button 
             onClick={onClose}
-            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+            className="absolute top-4 right-4 text-stone-400 hover:text-stone-600 transition-colors"
           >
             <X size={20} />
           </button>
 
           <div className="mb-6 mt-2">
-            <h2 className="text-2xl font-bold text-gray-800">{isLoginView ? '欢迎回来' : '创建账号'}</h2>
-            <p className="text-sm text-gray-500 mt-1">
+            <h2 className="text-2xl font-bold text-stone-800 font-serif">{isLoginView ? '欢迎回来' : '创建账号'}</h2>
+            <p className="text-sm text-stone-500 mt-1 font-sans">
               {isLoginView ? '请登录您的账号' : '免费注册一个新账号'}
             </p>
           </div>
@@ -147,16 +146,16 @@ const AuthModal: React.FC<Props> = ({ isOpen, onClose, onLogin, onRegister }) =>
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Username */}
             <div className="space-y-1">
-              <label className="text-xs font-bold text-gray-500 ml-1">用户名</label>
+              <label className="text-xs font-bold text-stone-500 ml-1 font-sans">用户名</label>
               <div className="relative">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400">
                   <User size={18} />
                 </div>
                 <input 
                   type="text" 
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                  className="w-full bg-white border border-stone-200 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-stone-400 focus:border-transparent transition-all font-sans"
                   placeholder="请输入用户名"
                 />
               </div>
@@ -164,16 +163,16 @@ const AuthModal: React.FC<Props> = ({ isOpen, onClose, onLogin, onRegister }) =>
 
             {/* Password */}
             <div className="space-y-1">
-              <label className="text-xs font-bold text-gray-500 ml-1">密码</label>
+              <label className="text-xs font-bold text-stone-500 ml-1 font-sans">密码</label>
               <div className="relative">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400">
                   <Lock size={18} />
                 </div>
                 <input 
                   type="password" 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                  className="w-full bg-white border border-stone-200 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-stone-400 focus:border-transparent transition-all font-sans"
                   placeholder="请输入密码"
                 />
               </div>
@@ -183,33 +182,33 @@ const AuthModal: React.FC<Props> = ({ isOpen, onClose, onLogin, onRegister }) =>
             {!isLoginView && (
                 <>
                     <div className="space-y-1 animate-in slide-in-from-top-1">
-                        <label className="text-xs font-bold text-gray-500 ml-1">手机号</label>
+                        <label className="text-xs font-bold text-stone-500 ml-1 font-sans">手机号</label>
                         <div className="relative">
-                            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400">
                                 <Phone size={18} />
                             </div>
                             <input 
                                 type="tel" 
                                 value={phoneNumber}
                                 onChange={(e) => setPhoneNumber(e.target.value)}
-                                className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                                className="w-full bg-white border border-stone-200 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-stone-400 focus:border-transparent transition-all font-sans"
                                 placeholder="请输入11位手机号"
                             />
                         </div>
                     </div>
 
                     <div className="space-y-1 animate-in slide-in-from-top-1">
-                        <label className="text-xs font-bold text-gray-500 ml-1">验证码</label>
+                        <label className="text-xs font-bold text-stone-500 ml-1 font-sans">验证码</label>
                         <div className="relative flex gap-2">
                             <div className="relative flex-1">
-                                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400">
                                     <MessageSquareCode size={18} />
                                 </div>
                                 <input 
                                     type="text" 
                                     value={verificationCode}
                                     onChange={(e) => setVerificationCode(e.target.value)}
-                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                                    className="w-full bg-white border border-stone-200 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-stone-400 focus:border-transparent transition-all font-sans"
                                     placeholder="输入验证码"
                                     maxLength={6}
                                 />
@@ -218,10 +217,10 @@ const AuthModal: React.FC<Props> = ({ isOpen, onClose, onLogin, onRegister }) =>
                                 type="button"
                                 onClick={handleSendCode}
                                 disabled={countdown > 0}
-                                className={`w-28 flex-shrink-0 rounded-xl font-bold text-xs transition-colors border ${
+                                className={`w-28 flex-shrink-0 rounded-xl font-bold text-xs transition-colors border font-sans ${
                                     countdown > 0 
-                                    ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' 
-                                    : 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100'
+                                    ? 'bg-stone-100 text-stone-400 border-stone-200 cursor-not-allowed' 
+                                    : 'bg-stone-200 text-stone-600 border-stone-300 hover:bg-stone-300'
                                 }`}
                             >
                                 {countdown > 0 ? `${countdown}秒后重试` : '获取验证码'}
@@ -232,7 +231,7 @@ const AuthModal: React.FC<Props> = ({ isOpen, onClose, onLogin, onRegister }) =>
             )}
 
             {error && (
-              <div className="text-red-500 text-xs bg-red-50 p-2 rounded-lg border border-red-100 animate-in slide-in-from-left-2 flex items-center gap-1">
+              <div className="text-red-500 text-xs bg-red-50 p-2 rounded-lg border border-red-100 animate-in slide-in-from-left-2 flex items-center gap-1 font-sans">
                 <span>⚠️</span> {error}
               </div>
             )}
@@ -240,7 +239,7 @@ const AuthModal: React.FC<Props> = ({ isOpen, onClose, onLogin, onRegister }) =>
             <button 
               type="submit"
               disabled={isLoading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-md shadow-blue-200 transition-all active:scale-95 flex items-center justify-center gap-2 mt-4"
+              className="w-full bg-stone-800 hover:bg-stone-900 text-white font-bold py-3 rounded-xl shadow-md shadow-stone-200 transition-all active:scale-95 flex items-center justify-center gap-2 mt-4 font-sans"
             >
               {isLoading ? (
                 <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
@@ -254,11 +253,11 @@ const AuthModal: React.FC<Props> = ({ isOpen, onClose, onLogin, onRegister }) =>
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-stone-500 font-sans">
               {isLoginView ? '还没有账号？' : '已有账号？'}
               <button 
                 onClick={() => { setIsLoginView(!isLoginView); setError(''); }}
-                className="text-blue-600 font-bold ml-1 hover:underline focus:outline-none"
+                className="text-stone-800 font-bold ml-1 hover:underline focus:outline-none"
               >
                 {isLoginView ? '去注册' : '去登录'}
               </button>

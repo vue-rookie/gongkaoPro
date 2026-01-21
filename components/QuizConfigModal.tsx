@@ -79,21 +79,21 @@ const QuizConfigModal: React.FC<Props> = ({ isOpen, onClose, onStart, currentMod
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6 m-4 animate-in zoom-in-95 duration-200 border border-gray-100 max-h-[90vh] overflow-y-auto scrollbar-hide">
+      <div className="bg-[#fcfaf8] rounded-2xl w-full max-w-sm shadow-2xl p-6 m-4 animate-in zoom-in-95 duration-200 border border-stone-200 max-h-[90vh] overflow-y-auto scrollbar-hide">
         
         <div className="flex justify-between items-start mb-6">
           <div className="flex items-center gap-3">
-             <div className={`${isShenLun ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600'} p-2 rounded-xl`}>
+             <div className="bg-stone-200 text-stone-600 p-2 rounded-xl">
                <ScrollText size={24} />
              </div>
              <div>
-                <h3 className="text-lg font-bold text-gray-800">
+                <h3 className="text-lg font-bold text-stone-800 font-serif">
                     {isShenLun ? '生成申论模拟题' : '生成全真模拟卷'}
                 </h3>
-                <p className="text-xs text-gray-500">AI 智能出题 · 计时模式</p>
+                <p className="text-xs text-stone-500 font-sans">AI 智能出题 · 计时模式</p>
              </div>
           </div>
-          <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+          <button onClick={onClose} className="p-1 rounded-full hover:bg-stone-200 text-stone-400 hover:text-stone-600 transition-colors">
             <X size={20} />
           </button>
         </div>
@@ -102,8 +102,8 @@ const QuizConfigModal: React.FC<Props> = ({ isOpen, onClose, onStart, currentMod
           
           {/* Topic Selection */}
           <div className="space-y-3">
-            <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                <ListFilter size={16} className={isShenLun ? "text-emerald-500" : "text-blue-500"} />
+            <label className="text-sm font-bold text-stone-700 flex items-center gap-2 font-serif">
+                <ListFilter size={16} className="text-stone-500" />
                 选择题型/主题
             </label>
             <div className="grid grid-cols-2 gap-2">
@@ -111,10 +111,10 @@ const QuizConfigModal: React.FC<Props> = ({ isOpen, onClose, onStart, currentMod
                     <button
                         key={topic}
                         onClick={() => handleTopicClick(topic)}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all text-left truncate ${
+                        className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all text-left truncate font-serif ${
                             selectedTopic === topic 
-                            ? (isShenLun ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-200' : 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-200')
-                            : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-blue-300 hover:bg-white'
+                            ? 'bg-stone-800 text-white border-stone-800 shadow-md'
+                            : 'bg-white text-stone-600 border-stone-200 hover:border-stone-400'
                         }`}
                     >
                         {topic}
@@ -124,22 +124,22 @@ const QuizConfigModal: React.FC<Props> = ({ isOpen, onClose, onStart, currentMod
 
             {/* Sub-topic Selection for Judgment Reasoning */}
             {isJudgment && (
-                <div className="bg-indigo-50 rounded-xl p-3 border border-indigo-100 animate-in slide-in-from-top-2">
+                <div className="bg-stone-100 rounded-xl p-3 border border-stone-200 animate-in slide-in-from-top-2">
                     <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs font-bold text-indigo-800 flex items-center gap-1">
+                        <span className="text-xs font-bold text-stone-700 flex items-center gap-1 font-serif">
                             <CheckSquare size={12} /> 细分题型 (可多选)
                         </span>
-                        <span className="text-[10px] text-indigo-400">已选 {subTopics.length} 项</span>
+                        <span className="text-[10px] text-stone-400 font-sans">已选 {subTopics.length} 项</span>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                         {JUDGMENT_SUBTOPICS.map(sub => (
                             <button
                                 key={sub}
                                 onClick={() => toggleSubTopic(sub)}
-                                className={`px-3 py-2 rounded-lg text-xs font-bold border transition-all flex items-center justify-between ${
+                                className={`px-3 py-2 rounded-lg text-xs font-bold border transition-all flex items-center justify-between font-serif ${
                                     subTopics.includes(sub)
-                                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                                    : 'bg-white text-gray-500 border-gray-200 hover:border-indigo-300'
+                                    ? 'bg-stone-600 text-white border-stone-600 shadow-sm'
+                                    : 'bg-white text-stone-500 border-stone-200 hover:border-stone-400'
                                 }`}
                             >
                                 <span>{sub}</span>
@@ -154,19 +154,19 @@ const QuizConfigModal: React.FC<Props> = ({ isOpen, onClose, onStart, currentMod
           {/* Count Selection - Hidden for Shen Lun */}
           {!isShenLun && (
               <div className="space-y-3 animate-in slide-in-from-top-2">
-                <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                    <Hash size={16} className="text-blue-500" />
+                <label className="text-sm font-bold text-stone-700 flex items-center gap-2 font-serif">
+                    <Hash size={16} className="text-stone-500" />
                     题目数量
                 </label>
-                <div className="flex bg-gray-100 p-1 rounded-xl">
+                <div className="flex bg-stone-100 p-1 rounded-xl">
                     {[5, 10, 15].map(num => (
                         <button
                             key={num}
                             onClick={() => setCount(num)}
-                            className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${
+                            className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all font-sans ${
                                 count === num 
-                                ? 'bg-white text-blue-600 shadow-sm' 
-                                : 'text-gray-500 hover:text-gray-700'
+                                ? 'bg-white text-stone-800 shadow-sm' 
+                                : 'text-stone-400 hover:text-stone-600'
                             }`}
                         >
                             {num} 道
@@ -178,11 +178,7 @@ const QuizConfigModal: React.FC<Props> = ({ isOpen, onClose, onStart, currentMod
 
           <button
             onClick={handleStart}
-            className={`w-full text-white font-bold py-3.5 rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 mt-2 ${
-                isShenLun 
-                ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200' 
-                : 'bg-blue-600 hover:bg-blue-700 shadow-blue-200'
-            }`}
+            className="w-full text-white font-bold py-3.5 rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 mt-2 bg-stone-800 hover:bg-stone-900 shadow-stone-200 font-serif"
           >
             <Check size={18} />
             {isShenLun ? '生成题目' : '开始刷题'}
