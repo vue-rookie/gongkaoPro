@@ -193,7 +193,7 @@ const ChatInterface: React.FC<Props> = ({
                  return (
                    <div key={msg.id} className="flex justify-center py-4 animate-in fade-in zoom-in-95 duration-300">
                      <span className="text-xs font-medium text-stone-400 tracking-wider uppercase px-2 bg-[#fcfaf8] z-10">{msg.text}</span>
-                     <div className="absolute w-full border-t border-stone-100 top-1/2 left-0 -z-0"></div>
+                     {/* <div className="absolute w-full border-t border-stone-100 top-1/2 left-0 -z-0"></div> */}
                    </div>
                  );
               }

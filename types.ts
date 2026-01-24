@@ -23,6 +23,8 @@ export interface User {
   username: string;
   password?: string; // In a real app, never store passwords in frontend state! This is for mock only.
   avatar?: string;
+  email?: string; // Email address
+  emailVerified?: boolean; // Email verification status
   phoneNumber?: string; // Added phone number
   createdAt: number;
 }

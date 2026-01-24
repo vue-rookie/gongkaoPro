@@ -34,6 +34,8 @@ const SessionSchema = new Schema({
 const UserSchema = new Schema({
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true }, // Hashed password
+  email: { type: String, required: true, unique: true },
+  emailVerified: { type: Boolean, default: false },
   phoneNumber: { type: String },
   avatar: String,
   createdAt: { type: Number, default: Date.now },
@@ -49,6 +51,9 @@ const UserSchema = new Schema({
     currentMode: String
   }
 });
+
+// Add email index for faster lookups
+UserSchema.index({ email: 1 });
 
 const User = models.User || model('User', UserSchema);
 

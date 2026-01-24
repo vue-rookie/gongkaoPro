@@ -1,27 +1,28 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, User, Lock, ArrowRight, Sparkles, GraduationCap, Phone, MessageSquareCode } from 'lucide-react';
+import { X, User, Lock, ArrowRight, Sparkles, GraduationCap, Mail, MessageSquareCode } from 'lucide-react';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   onLogin: (username: string, password: string) => Promise<void>;
-  onRegister: (username: string, password: string, phoneNumber: string) => Promise<void>;
+  onRegister: (username: string, password: string, email: string, verificationCode: string) => Promise<void>;
 }
 
 const AuthModal: React.FC<Props> = ({ isOpen, onClose, onLogin, onRegister }) => {
-  const [isLoginView, setIsLoginView] = useState(true);
-  
+  const [viewMode, setViewMode] = useState<'login' | 'register' | 'resetPassword'>('login');
+
   // Form Fields
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [email, setEmail] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
-  
+
   // Verification State
   const [countdown, setCountdown] = useState(0);
-  const [sentCode, setSentCode] = useState<string | null>(null);
+  const [isSendingCode, setIsSendingCode] = useState(false);
 
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -41,70 +42,116 @@ const AuthModal: React.FC<Props> = ({ isOpen, onClose, onLogin, onRegister }) =>
         setError('');
         setUsername('');
         setPassword('');
-        setPhoneNumber('');
+        setConfirmPassword('');
+        setEmail('');
         setVerificationCode('');
-        setSentCode(null);
         setCountdown(0);
     }
-  }, [isOpen, isLoginView]);
+  }, [isOpen, viewMode]);
 
   if (!isOpen) return null;
 
-  const handleSendCode = () => {
-    if (!phoneNumber) {
-        setError('请输入手机号');
+  const handleSendCode = async () => {
+    if (!email) {
+        setError('请输入邮箱');
         return;
     }
-    // Simple regex for Chinese phone numbers
-    if (!/^1[3-9]\d{9}$/.test(phoneNumber)) {
-        setError('请输入正确的11位手机号');
+    // Email validation regex
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        setError('请输入正确的邮箱地址');
         return;
     }
 
     setError('');
-    const mockCode = Math.floor(1000 + Math.random() * 9000).toString();
-    setSentCode(mockCode);
-    setCountdown(60); // Start 60s countdown
-    
-    // Simulate SMS sending
-    setTimeout(() => {
-        alert(`【公考智囊】您的验证码是：${mockCode}，请在1分钟内输入。`);
-    }, 500);
+    setIsSendingCode(true);
+
+    try {
+      const type = viewMode === 'register' ? 'register' : 'reset_password';
+      const response = await fetch('/api/auth/send-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, type }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || '发送验证码失败');
+        return;
+      }
+
+      setCountdown(60); // Start 60s countdown
+      alert('验证码已发送到您的邮箱，请查收！');
+    } catch (err) {
+      setError('发送验证码失败，请稍后重试');
+    } finally {
+      setIsSendingCode(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
-    if (!username.trim() || !password.trim()) {
-      setError('请输入用户名和密码');
-      return;
-    }
 
-    if (!isLoginView) {
-        if (!phoneNumber) {
-            setError('请输入手机号');
-            return;
-        }
-        if (!verificationCode) {
-            setError('请输入验证码');
-            return;
-        }
-        if (verificationCode !== sentCode) {
-            setError('验证码错误或已过期');
-            return;
-        }
+    if (viewMode === 'login') {
+      // Login validation
+      if (!username.trim() || !password.trim()) {
+        setError('请输入用户名和密码');
+        return;
+      }
+    } else if (viewMode === 'register') {
+      // Register validation
+      if (!username.trim() || !password.trim() || !email.trim() || !verificationCode.trim()) {
+        setError('请填写所有必填字段');
+        return;
+      }
+      if (password.length < 6) {
+        setError('密码长度至少为6位');
+        return;
+      }
+    } else if (viewMode === 'resetPassword') {
+      // Reset password validation
+      if (!email.trim() || !verificationCode.trim() || !password.trim() || !confirmPassword.trim()) {
+        setError('请填写所有必填字段');
+        return;
+      }
+      if (password.length < 6) {
+        setError('密码长度至少为6位');
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError('两次输入的密码不一致');
+        return;
+      }
     }
 
     setIsLoading(true);
 
     try {
-      if (isLoginView) {
+      if (viewMode === 'login') {
         await onLogin(username, password);
-      } else {
-        await onRegister(username, password, phoneNumber);
+        onClose();
+      } else if (viewMode === 'register') {
+        await onRegister(username, password, email, verificationCode);
+        onClose();
+      } else if (viewMode === 'resetPassword') {
+        const response = await fetch('/api/auth/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, verificationCode, newPassword: password }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          setError(data.error || '密码重置失败');
+          return;
+        }
+
+        alert('密码重置成功，请使用新密码登录');
+        setViewMode('login');
       }
-      onClose();
     } catch (err: any) {
       setError(err.message || '操作失败');
     } finally {
@@ -125,7 +172,9 @@ const AuthModal: React.FC<Props> = ({ isOpen, onClose, onLogin, onRegister }) =>
              <h3 className="font-bold text-xl leading-tight font-serif">公考智囊<br/><span className="text-stone-400 text-sm font-normal font-sans">GongKao Pro</span></h3>
           </div>
           <div className="z-10 text-xs text-stone-500 leading-relaxed font-serif">
-             {isLoginView ? "登录以同步您的学习进度、错题本和模拟考记录。" : "注册账号，开启您的智能备考之旅。"}
+             {viewMode === 'login' && "登录以同步您的学习进度、错题本和模拟考记录。"}
+             {viewMode === 'register' && "注册账号，开启您的智能备考之旅。"}
+             {viewMode === 'resetPassword' && "重置密码，找回您的账号访问权限。"}
           </div>
         </div>
 
@@ -139,97 +188,127 @@ const AuthModal: React.FC<Props> = ({ isOpen, onClose, onLogin, onRegister }) =>
           </button>
 
           <div className="mb-6 mt-2">
-            <h2 className="text-2xl font-bold text-stone-800 font-serif">{isLoginView ? '欢迎回来' : '创建账号'}</h2>
+            <h2 className="text-2xl font-bold text-stone-800 font-serif">
+              {viewMode === 'login' && '欢迎回来'}
+              {viewMode === 'register' && '创建账号'}
+              {viewMode === 'resetPassword' && '重置密码'}
+            </h2>
             <p className="text-sm text-stone-500 mt-1 font-sans">
-              {isLoginView ? '请登录您的账号' : '免费注册一个新账号'}
+              {viewMode === 'login' && '请登录您的账号'}
+              {viewMode === 'register' && '免费注册一个新账号'}
+              {viewMode === 'resetPassword' && '通过邮箱验证码重置密码'}
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Username */}
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-stone-500 ml-1 font-sans">用户名</label>
-              <div className="relative">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400">
-                  <User size={18} />
+            {/* Username - Only for login and register */}
+            {viewMode !== 'resetPassword' && (
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-stone-500 ml-1 font-sans">用户名</label>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400">
+                    <User size={18} />
+                  </div>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="w-full bg-white border border-stone-200 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-stone-400 focus:border-transparent transition-all font-sans"
+                    placeholder="请输入用户名"
+                  />
                 </div>
-                <input 
-                  type="text" 
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="w-full bg-white border border-stone-200 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-stone-400 focus:border-transparent transition-all font-sans"
-                  placeholder="请输入用户名"
-                />
               </div>
-            </div>
+            )}
+
+            {/* Email - Only for register and resetPassword */}
+            {viewMode !== 'login' && (
+              <div className="space-y-1 animate-in slide-in-from-top-1">
+                <label className="text-xs font-bold text-stone-500 ml-1 font-sans">邮箱</label>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400">
+                    <Mail size={18} />
+                  </div>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full bg-white border border-stone-200 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-stone-400 focus:border-transparent transition-all font-sans"
+                    placeholder="请输入邮箱地址"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Verification Code - Only for register and resetPassword */}
+            {viewMode !== 'login' && (
+              <div className="space-y-1 animate-in slide-in-from-top-1">
+                <label className="text-xs font-bold text-stone-500 ml-1 font-sans">验证码</label>
+                <div className="relative flex gap-2">
+                  <div className="relative flex-1">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400">
+                      <MessageSquareCode size={18} />
+                    </div>
+                    <input
+                      type="text"
+                      value={verificationCode}
+                      onChange={(e) => setVerificationCode(e.target.value)}
+                      className="w-full bg-white border border-stone-200 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-stone-400 focus:border-transparent transition-all font-sans"
+                      placeholder="输入验证码"
+                      maxLength={6}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSendCode}
+                    disabled={countdown > 0 || isSendingCode}
+                    className={`w-28 flex-shrink-0 rounded-xl font-bold text-xs transition-colors border font-sans ${
+                      countdown > 0 || isSendingCode
+                        ? 'bg-stone-100 text-stone-400 border-stone-200 cursor-not-allowed'
+                        : 'bg-stone-200 text-stone-600 border-stone-300 hover:bg-stone-300'
+                    }`}
+                  >
+                    {isSendingCode ? '发送中...' : countdown > 0 ? `${countdown}秒后重试` : '获取验证码'}
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Password */}
             <div className="space-y-1">
-              <label className="text-xs font-bold text-stone-500 ml-1 font-sans">密码</label>
+              <label className="text-xs font-bold text-stone-500 ml-1 font-sans">
+                {viewMode === 'resetPassword' ? '新密码' : '密码'}
+              </label>
               <div className="relative">
                 <div className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400">
                   <Lock size={18} />
                 </div>
-                <input 
-                  type="password" 
+                <input
+                  type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full bg-white border border-stone-200 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-stone-400 focus:border-transparent transition-all font-sans"
-                  placeholder="请输入密码"
+                  placeholder={viewMode === 'resetPassword' ? '请输入新密码' : '请输入密码'}
                 />
               </div>
             </div>
 
-            {/* Registration Only Fields */}
-            {!isLoginView && (
-                <>
-                    <div className="space-y-1 animate-in slide-in-from-top-1">
-                        <label className="text-xs font-bold text-stone-500 ml-1 font-sans">手机号</label>
-                        <div className="relative">
-                            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400">
-                                <Phone size={18} />
-                            </div>
-                            <input 
-                                type="tel" 
-                                value={phoneNumber}
-                                onChange={(e) => setPhoneNumber(e.target.value)}
-                                className="w-full bg-white border border-stone-200 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-stone-400 focus:border-transparent transition-all font-sans"
-                                placeholder="请输入11位手机号"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="space-y-1 animate-in slide-in-from-top-1">
-                        <label className="text-xs font-bold text-stone-500 ml-1 font-sans">验证码</label>
-                        <div className="relative flex gap-2">
-                            <div className="relative flex-1">
-                                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400">
-                                    <MessageSquareCode size={18} />
-                                </div>
-                                <input 
-                                    type="text" 
-                                    value={verificationCode}
-                                    onChange={(e) => setVerificationCode(e.target.value)}
-                                    className="w-full bg-white border border-stone-200 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-stone-400 focus:border-transparent transition-all font-sans"
-                                    placeholder="输入验证码"
-                                    maxLength={6}
-                                />
-                            </div>
-                            <button 
-                                type="button"
-                                onClick={handleSendCode}
-                                disabled={countdown > 0}
-                                className={`w-28 flex-shrink-0 rounded-xl font-bold text-xs transition-colors border font-sans ${
-                                    countdown > 0 
-                                    ? 'bg-stone-100 text-stone-400 border-stone-200 cursor-not-allowed' 
-                                    : 'bg-stone-200 text-stone-600 border-stone-300 hover:bg-stone-300'
-                                }`}
-                            >
-                                {countdown > 0 ? `${countdown}秒后重试` : '获取验证码'}
-                            </button>
-                        </div>
-                    </div>
-                </>
+            {/* Confirm Password - Only for resetPassword */}
+            {viewMode === 'resetPassword' && (
+              <div className="space-y-1 animate-in slide-in-from-top-1">
+                <label className="text-xs font-bold text-stone-500 ml-1 font-sans">确认密码</label>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400">
+                    <Lock size={18} />
+                  </div>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full bg-white border border-stone-200 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-stone-400 focus:border-transparent transition-all font-sans"
+                    placeholder="请再次输入新密码"
+                  />
+                </div>
+              </div>
             )}
 
             {error && (
@@ -238,7 +317,7 @@ const AuthModal: React.FC<Props> = ({ isOpen, onClose, onLogin, onRegister }) =>
               </div>
             )}
 
-            <button 
+            <button
               type="submit"
               disabled={isLoading}
               className="w-full bg-stone-800 hover:bg-stone-900 text-white font-bold py-3 rounded-xl shadow-md shadow-stone-200 transition-all active:scale-95 flex items-center justify-center gap-2 mt-4 font-sans"
@@ -247,23 +326,59 @@ const AuthModal: React.FC<Props> = ({ isOpen, onClose, onLogin, onRegister }) =>
                 <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
               ) : (
                 <>
-                  <span>{isLoginView ? '立即登录' : '立即注册'}</span>
+                  <span>
+                    {viewMode === 'login' && '立即登录'}
+                    {viewMode === 'register' && '立即注册'}
+                    {viewMode === 'resetPassword' && '重置密码'}
+                  </span>
                   <ArrowRight size={18} />
                 </>
               )}
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-xs text-stone-500 font-sans">
-              {isLoginView ? '还没有账号？' : '已有账号？'}
-              <button 
-                onClick={() => { setIsLoginView(!isLoginView); setError(''); }}
-                className="text-stone-800 font-bold ml-1 hover:underline focus:outline-none"
-              >
-                {isLoginView ? '去注册' : '去登录'}
-              </button>
-            </p>
+          <div className="mt-6 text-center space-y-2">
+            {viewMode === 'login' && (
+              <>
+                <button
+                  onClick={() => setViewMode('resetPassword')}
+                  className="text-xs text-stone-600 hover:text-stone-800 hover:underline focus:outline-none font-sans"
+                >
+                  忘记密码？
+                </button>
+                <p className="text-xs text-stone-500 font-sans">
+                  还没有账号？
+                  <button
+                    onClick={() => { setViewMode('register'); setError(''); }}
+                    className="text-stone-800 font-bold ml-1 hover:underline focus:outline-none"
+                  >
+                    去注册
+                  </button>
+                </p>
+              </>
+            )}
+            {viewMode === 'register' && (
+              <p className="text-xs text-stone-500 font-sans">
+                已有账号？
+                <button
+                  onClick={() => { setViewMode('login'); setError(''); }}
+                  className="text-stone-800 font-bold ml-1 hover:underline focus:outline-none"
+                >
+                  去登录
+                </button>
+              </p>
+            )}
+            {viewMode === 'resetPassword' && (
+              <p className="text-xs text-stone-500 font-sans">
+                想起密码了？
+                <button
+                  onClick={() => { setViewMode('login'); setError(''); }}
+                  className="text-stone-800 font-bold ml-1 hover:underline focus:outline-none"
+                >
+                  去登录
+                </button>
+              </p>
+            )}
           </div>
         </div>
       </div>

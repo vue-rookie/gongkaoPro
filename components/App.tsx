@@ -139,13 +139,13 @@ const App: React.FC = () => {
 
   // --- Auth Handlers ---
 
-  const handleRegister = async (username: string, password: string, phoneNumber: string) => {
+  const handleRegister = async (username: string, password: string, email: string, verificationCode: string) => {
     const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, phoneNumber })
+        body: JSON.stringify({ username, password, email, verificationCode })
     });
-    
+
     const data = await res.json();
     if (!res.ok) throw new Error(data.message);
 
