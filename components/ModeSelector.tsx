@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { ExamMode } from '../types';
 import { MODE_LABELS, MODE_DESCRIPTIONS } from '../constants';

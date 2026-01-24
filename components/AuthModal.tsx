@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { X, User, Lock, ArrowRight, Sparkles, GraduationCap, Phone, MessageSquareCode } from 'lucide-react';
 

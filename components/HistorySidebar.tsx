@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { MessageSquarePlus, Trash2, X, Clock } from 'lucide-react';
 import { Session } from '../types';

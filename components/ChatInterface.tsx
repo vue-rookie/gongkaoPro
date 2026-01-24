@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useRef, useEffect, useState } from 'react';
 import { Message, ExamMode, Category, QuizConfig } from '../types';
 import MarkdownRenderer from './MarkdownRenderer';

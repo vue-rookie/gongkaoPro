@@ -1,0 +1,7 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/auth/login/route": "app/api/auth/login/route.js",
+  "/api/gemini/chat/route": "app/api/gemini/chat/route.js",
+  "/api/gemini/quiz/route": "app/api/gemini/quiz/route.js",
+  "/page": "app/page.js"
+}

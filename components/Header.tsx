@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { GraduationCap, Sparkles, Trash2, BookOpen, Menu, LogIn, UserCircle, LogOut, ChevronDown, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { User } from '../types';

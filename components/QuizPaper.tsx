@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { QuizQuestion, ExamMode } from '../types';
 import { ChevronLeft, ChevronRight, CheckCircle2, XCircle, Lightbulb, Trophy, BookOpen, Clock, FileCheck, Play, BookText, PenTool, Maximize2, Minimize2 } from 'lucide-react';

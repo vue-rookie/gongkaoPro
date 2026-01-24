@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { Category, Message, ExamMode } from '../types';
 import { MODE_LABELS } from '../constants';

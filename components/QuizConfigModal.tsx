@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { X, ScrollText, Check, ListFilter, Hash, CheckSquare } from 'lucide-react';
 import { ExamMode } from '../types';

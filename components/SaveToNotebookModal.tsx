@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { X, FolderPlus, Check, Folder, CornerDownRight } from 'lucide-react';
 import { Category, ExamMode } from '../types';

@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { TrendingUp, TrendingDown, Calculator, FileText, Lightbulb, ChevronUp, ChevronDown, HelpCircle } from 'lucide-react';
 
