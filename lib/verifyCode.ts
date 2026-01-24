@@ -19,7 +19,7 @@ export async function verifyCode(
 ): Promise<VerifyCodeResult> {
   try {
     // Find the verification code
-    const verificationCode = await VerificationCode.findOne({ email, type });
+    const verificationCode = await VerificationCode.findOne({ email, type } as any);
 
     if (!verificationCode) {
       return { success: false, message: '验证码不存在或已过期' };

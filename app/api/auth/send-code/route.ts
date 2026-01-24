@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     console.log('数据库连接成功');
 
     // Check rate limiting: 60 seconds between requests
-    const existingCode = await VerificationCode.findOne({ email, type });
+    const existingCode = await VerificationCode.findOne({ email, type } as any);
     if (existingCode) {
       const timeSinceCreation = Date.now() - existingCode.createdAt.getTime();
       if (timeSinceCreation < 60000) { // 60 seconds
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
         );
       }
       // Delete old code if rate limit passed
-      await VerificationCode.deleteOne({ email, type });
+      await VerificationCode.deleteOne({ email, type } as any);
     }
 
     // Generate verification code

@@ -28,13 +28,13 @@ export async function POST(req: Request) {
     }
 
     // Check if username already exists
-    const existingUser = await User.findOne({ username });
+    const existingUser = await User.findOne({ username } as any);
     if (existingUser) {
       return NextResponse.json({ message: '用户名已存在' }, { status: 400 });
     }
 
     // Check if email already exists
-    const existingEmail = await User.findOne({ email });
+    const existingEmail = await User.findOne({ email } as any);
     if (existingEmail) {
       return NextResponse.json({ message: '邮箱已被注册' }, { status: 400 });
     }

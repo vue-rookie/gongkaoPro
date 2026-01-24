@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Find user by email
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email } as any);
     if (!user) {
       // For security, don't reveal if email exists
       return NextResponse.json(

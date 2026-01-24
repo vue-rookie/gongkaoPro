@@ -11,7 +11,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: 'Missing data' }, { status: 400 });
     }
 
-    await User.findByIdAndUpdate(userId, {
+    (User.findByIdAndUpdate as any)(userId, {
       $set: { data: data }
     });
 
@@ -30,7 +30,7 @@ export async function GET(req: Request) {
 
         if (!userId) return NextResponse.json({ message: 'No User ID' }, { status: 400 });
 
-        const user = await User.findById(userId);
+        const user = await (User.findById as any)(userId);
         if (!user) return NextResponse.json({ message: 'User not found' }, { status: 404 });
 
         return NextResponse.json(user.data || {});

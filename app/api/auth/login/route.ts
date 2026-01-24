@@ -9,7 +9,7 @@ export async function POST(req: Request) {
     const { username, password } = await req.json();
 
     // Select password to verify, and data to load state
-    const user = await User.findOne({ username }).select('+password');
+    const user = await User.findOne({ username } as any).select('+password');
     
     if (!user) {
       return NextResponse.json({ message: '用户名或密码错误' }, { status: 401 });
