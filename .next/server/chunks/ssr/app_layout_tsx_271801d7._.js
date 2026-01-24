@@ -1,3 +1,0 @@
-module.exports=[33290,a=>{"use strict";var b=a.i(74127);function c({children:a}){return(0,b.jsxs)("html",{lang:"zh-CN",children:[(0,b.jsx)("head",{children:(0,b.jsx)("link",{rel:"stylesheet",href:"https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css",integrity:"sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV",crossOrigin:"anonymous"})}),(0,b.jsx)("body",{children:(0,b.jsx)("div",{id:"root",children:a})})]})}a.s(["default",()=>c,"metadata",0,{title:"GongKao Pro - 公考智囊",description:"An advanced AI assistant for Chinese Civil Service Exams"}])}];
-
-//# sourceMappingURL=app_layout_tsx_271801d7._.js.map
