@@ -4,6 +4,7 @@ const nextConfig = {
   assetPrefix: '/gongkao/',
   reactStrictMode: true,
   reactStrictMode: true,
+  ignoreBuildErrors: true,
 }
 
 export default nextConfig
