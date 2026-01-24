@@ -12,6 +12,7 @@ import { ChatState, ExamMode, Message, Category, Session, User, QuizConfig } fro
 import { sendMessageToGemini, generateQuiz } from '../services/geminiService';
 import { MODE_LABELS } from '../constants';
 import { v4 as uuidv4 } from 'uuid';
+import { getApiPath } from '../config/api';
 
 const generateId = () => Date.now().toString(36) + Math.random().toString(36).substr(2);
 
@@ -91,7 +92,7 @@ const App: React.FC = () => {
     const fetchUserData = async () => {
         if (chatState.currentUser) {
             try {
-                const res = await fetch(`/api/data?userId=${chatState.currentUser.id}`);
+                const res = await fetch(getApiPath(`/api/data?userId=${chatState.currentUser.id}`));
                 if (res.ok) {
                     const cloudData = await res.json();
                     if (cloudData && cloudData.sessions && cloudData.sessions.length > 0) {
@@ -122,7 +123,7 @@ const App: React.FC = () => {
 
     if (chatState.currentUser) {
         // Cloud Sync
-        fetch('/api/data', {
+        fetch(getApiPath('/api/data'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -140,7 +141,7 @@ const App: React.FC = () => {
   // --- Auth Handlers ---
 
   const handleRegister = async (username: string, password: string, email: string, verificationCode: string) => {
-    const res = await fetch('/api/auth/register', {
+    const res = await fetch(getApiPath('/api/auth/register'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password, email, verificationCode })
@@ -154,7 +155,7 @@ const App: React.FC = () => {
   };
 
   const handleLogin = async (username: string, password: string) => {
-    const res = await fetch('/api/auth/login', {
+    const res = await fetch(getApiPath('/api/auth/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
@@ -399,7 +400,7 @@ const App: React.FC = () => {
   const handleClearHistory = () => {
     if (chatState.currentUser) {
         // Clear via API
-        fetch('/api/data', {
+        fetch(getApiPath('/api/data'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

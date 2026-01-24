@@ -1,4 +1,5 @@
 import { ExamMode, QuizQuestion } from '../types';
+import { getApiPath } from '../config/api';
 
 interface SendMessageParams {
   text: string;
@@ -19,7 +20,7 @@ export const sendMessageToGemini = async ({
   history = []
 }: SendMessageParams): Promise<GeminiResponse> => {
   try {
-    const response = await fetch('/api/gemini/chat', {
+    const response = await fetch(getApiPath('/api/gemini/chat'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -50,7 +51,7 @@ export const sendMessageToGemini = async ({
 
 export const generateQuiz = async (mode: ExamMode, topic?: string, count: number = 5): Promise<QuizQuestion[]> => {
   try {
-    const response = await fetch('/api/gemini/quiz', {
+    const response = await fetch(getApiPath('/api/gemini/quiz'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

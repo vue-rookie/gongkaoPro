@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, User, Lock, ArrowRight, Sparkles, GraduationCap, Mail, MessageSquareCode } from 'lucide-react';
+import { getApiPath } from '../config/api';
 
 interface Props {
   isOpen: boolean;
@@ -68,7 +69,7 @@ const AuthModal: React.FC<Props> = ({ isOpen, onClose, onLogin, onRegister }) =>
 
     try {
       const type = viewMode === 'register' ? 'register' : 'reset_password';
-      const response = await fetch('/api/auth/send-code', {
+      const response = await fetch(getApiPath('/api/auth/send-code'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, type }),
@@ -136,7 +137,7 @@ const AuthModal: React.FC<Props> = ({ isOpen, onClose, onLogin, onRegister }) =>
         await onRegister(username, password, email, verificationCode);
         onClose();
       } else if (viewMode === 'resetPassword') {
-        const response = await fetch('/api/auth/reset-password', {
+        const response = await fetch(getApiPath('/api/auth/reset-password'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, verificationCode, newPassword: password }),
