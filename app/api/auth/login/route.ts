@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
 import bcrypt from 'bcryptjs';
+import { signToken } from '@/lib/auth';
 
 export async function POST(req: Request) {
   try {
@@ -23,8 +24,16 @@ export async function POST(req: Request) {
     const userObj = user.toObject();
     delete userObj.password;
 
+    // Generate JWT token
+    const token = signToken({
+      userId: userObj._id.toString(),
+      username: userObj.username,
+      email: userObj.email
+    });
+
     // Return User Info AND their Data
     return NextResponse.json({
+      token,
       user: {
          id: userObj._id.toString(),
          username: userObj.username,

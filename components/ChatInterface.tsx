@@ -6,10 +6,12 @@ import MarkdownRenderer from './MarkdownRenderer';
 import SaveToNotebookModal from './SaveToNotebookModal';
 import QuizPaper from './QuizPaper';
 import QuizConfigModal from './QuizConfigModal';
+import UsageLimitBanner from './UsageLimitBanner';
 import { MODE_LABELS } from '../constants';
 import { generateQuiz } from '../services/geminiService';
 import { v4 as uuidv4 } from 'uuid';
 import { Send, Image as ImageIcon, Loader2, X, Bot, Sparkles, Plus, ArrowLeftRight, Star, StickyNote, PenLine, Check, Tag, ScrollText } from 'lucide-react';
+import { MembershipInfo } from '../services/membershipService';
 
 interface Props {
   messages: Message[];
@@ -17,20 +19,24 @@ interface Props {
   isLoading: boolean;
   onSendMessage: (text: string, image?: string, quizConfig?: QuizConfig) => void;
   currentMode: ExamMode;
-  onSaveMessage: (id: string, categoryId: string) => void; 
+  onSaveMessage: (id: string, categoryId: string) => void;
   onCreateCategory: (name: string) => string;
   onUpdateNote: (id: string, note: string) => void;
+  membershipInfo?: MembershipInfo | null;
+  onUpgradeClick: () => void;
 }
 
-const ChatInterface: React.FC<Props> = ({ 
-  messages, 
+const ChatInterface: React.FC<Props> = ({
+  messages,
   categories,
-  isLoading, 
-  onSendMessage, 
-  currentMode, 
+  isLoading,
+  onSendMessage,
+  currentMode,
   onSaveMessage,
   onCreateCategory,
-  onUpdateNote
+  onUpdateNote,
+  membershipInfo,
+  onUpgradeClick
 }) => {
   const [inputText, setInputText] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -137,17 +143,17 @@ const ChatInterface: React.FC<Props> = ({
 
   return (
     <div className="absolute inset-0 flex flex-col bg-[#fcfaf8] md:rounded-tl-2xl overflow-hidden">
-      
+
       {/* Quiz Configuration Modal */}
-      <QuizConfigModal 
-         isOpen={isQuizConfigOpen} 
+      <QuizConfigModal
+         isOpen={isQuizConfigOpen}
          onClose={() => setIsQuizConfigOpen(false)}
          onStart={handleQuizConfigStart}
          currentMode={currentMode}
       />
 
       {/* Save Modal */}
-      <SaveToNotebookModal 
+      <SaveToNotebookModal
         isOpen={saveModalOpen}
         onClose={() => setSaveModalOpen(false)}
         onSave={(catId) => {
@@ -157,6 +163,18 @@ const ChatInterface: React.FC<Props> = ({
         categories={categories}
         currentMode={currentMode}
       />
+
+      {/* Usage Limit Banner */}
+      {membershipInfo && (
+        <UsageLimitBanner
+          remaining={membershipInfo.usage.freeTrialRemaining}
+          isMember={membershipInfo.membership.status === 'active' && membershipInfo.membership.type !== 'free'}
+          membershipType={membershipInfo.membership.type}
+          daysRemaining={membershipInfo.membership.daysRemaining}
+          membershipUsageRemaining={membershipInfo.usage.membershipUsageRemaining}
+          onUpgrade={onUpgradeClick}
+        />
+      )}
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto scroll-smooth scrollbar-hide">

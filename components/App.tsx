@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Header from './Header';
 import ModeSelector from './ModeSelector';
 import ChatInterface from './ChatInterface';
@@ -13,14 +14,17 @@ import { sendMessageToGemini, generateQuiz } from '../services/geminiService';
 import { MODE_LABELS } from '../constants';
 import { v4 as uuidv4 } from 'uuid';
 import { getApiPath } from '../config/api';
+import { getMembershipInfo, MembershipInfo } from '../services/membershipService';
 
 const generateId = () => Date.now().toString(36) + Math.random().toString(36).substr(2);
 
 // LocalStorage Keys (Only for Guest/Token)
-const GUEST_DATA_KEY = 'gongkao_guest_data'; 
-const USER_INFO_KEY = 'gongkao_user_info'; 
+const GUEST_DATA_KEY = 'gongkao_guest_data';
+const USER_INFO_KEY = 'gongkao_user_info';
+const TOKEN_KEY = 'gongkao_token'; 
 
 const App: React.FC = () => {
+  const router = useRouter();
 
   // --- Initial State Initialization ---
   const [chatState, setChatState] = useState<ChatState>({
@@ -37,6 +41,8 @@ const App: React.FC = () => {
   const [isClearHistoryModalOpen, setIsClearHistoryModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [token, setToken] = useState<string>('');
+  const [membershipInfo, setMembershipInfo] = useState<MembershipInfo | null>(null);
 
   // Sidebar States
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -49,6 +55,9 @@ const App: React.FC = () => {
     // 1. Check if user was logged in
     const userStr = localStorage.getItem(USER_INFO_KEY);
     const savedUser = userStr ? JSON.parse(userStr) : null;
+    const savedToken = localStorage.getItem(TOKEN_KEY) || '';
+
+    setToken(savedToken);
 
     const defaultState: ChatState = {
       currentUser: savedUser,
@@ -75,6 +84,21 @@ const App: React.FC = () => {
     setChatState(defaultState);
     setIsInitialized(true);
   }, [isInitialized]);
+
+  // Load membership info when user logs in
+  useEffect(() => {
+    const loadMembershipInfo = async () => {
+      if (token && chatState.currentUser) {
+        try {
+          const info = await getMembershipInfo(token);
+          setMembershipInfo(info);
+        } catch (error) {
+          console.error('Failed to load membership info:', error);
+        }
+      }
+    };
+    loadMembershipInfo();
+  }, [token, chatState.currentUser]);
 
   // Toggle Logic
   const handleSidebarToggle = () => {
@@ -164,10 +188,12 @@ const App: React.FC = () => {
     const data = await res.json();
     if (!res.ok) throw new Error(data.message);
 
-    const { user, data: cloudData } = data;
+    const { user, data: cloudData, token: authToken } = data;
 
-    // Save user info locally to persist login state across reloads
+    // Save user info and token locally
     localStorage.setItem(USER_INFO_KEY, JSON.stringify(user));
+    localStorage.setItem(TOKEN_KEY, authToken);
+    setToken(authToken);
 
     // Merge Cloud Data
     setChatState(prev => ({
@@ -180,7 +206,10 @@ const App: React.FC = () => {
 
   const handleLogout = () => {
     localStorage.removeItem(USER_INFO_KEY);
-    
+    localStorage.removeItem(TOKEN_KEY);
+    setToken('');
+    setMembershipInfo(null);
+
     // Switch to guest mode (try load guest data)
     const guestDataStr = localStorage.getItem(GUEST_DATA_KEY);
     let guestData = {
@@ -190,7 +219,7 @@ const App: React.FC = () => {
         currentSessionId: '',
         currentMode: ExamMode.XING_CE
     };
-    
+
     if (guestDataStr) {
         guestData = { ...guestData, ...JSON.parse(guestDataStr) };
     }
@@ -329,8 +358,8 @@ const App: React.FC = () => {
     try {
       if (isQuizRequest) {
           // --- QUIZ FLOW ---
-          const quizData = await generateQuiz(chatState.currentMode, quizConfig.topic, quizConfig.count);
-          
+          const quizData = await generateQuiz(chatState.currentMode, quizConfig.topic, quizConfig.count, token);
+
           const modelMsg: Message = {
             id: generateId(),
             role: 'model',
@@ -353,15 +382,37 @@ const App: React.FC = () => {
             .filter(m => m.sessionId === activeSessionId && !m.isError && !m.isSystem && !m.quizData) // Filter out complex quiz messages from history to keep context clean
             .map(m => ({
               role: m.role,
-              parts: [{ text: m.text }] 
+              parts: [{ text: m.text }]
             }));
 
           const response = await sendMessageToGemini({
             text,
             image,
             mode: chatState.currentMode,
-            history: historyForApi
+            history: historyForApi,
+            token
           });
+
+          // Check if upgrade is needed
+          if (response.needUpgrade) {
+            const errorMsg: Message = {
+              id: generateId(),
+              role: 'model',
+              text: response.text,
+              timestamp: Date.now(),
+              isError: true,
+              mode: chatState.currentMode,
+              sessionId: activeSessionId
+            };
+            setChatState(prev => ({
+              ...prev,
+              messages: [...prev.messages, errorMsg],
+              isLoading: false
+            }));
+            // Navigate to membership page
+            router.push('/membership');
+            return;
+          }
 
           const modelMsg: Message = {
             id: generateId(),
@@ -379,7 +430,28 @@ const App: React.FC = () => {
           }));
       }
 
-    } catch (error) {
+    } catch (error: any) {
+      // Check if it's an upgrade error
+      if (error.message && error.message.includes('免费次数已用完')) {
+        const errorMsg: Message = {
+          id: generateId(),
+          role: 'model',
+          text: error.message,
+          timestamp: Date.now(),
+          isError: true,
+          mode: chatState.currentMode,
+          sessionId: activeSessionId
+        };
+        setChatState(prev => ({
+          ...prev,
+          messages: [...prev.messages, errorMsg],
+          isLoading: false
+        }));
+        // Navigate to membership page
+        router.push('/membership');
+        return;
+      }
+
       const errorMsg: Message = {
         id: generateId(),
         role: 'model',
@@ -395,7 +467,7 @@ const App: React.FC = () => {
         isLoading: false
       }));
     }
-  }, [chatState.currentMode, chatState.messages, chatState.currentSessionId]);
+  }, [chatState.currentMode, chatState.messages, chatState.currentSessionId, token]);
 
   const handleClearHistory = () => {
     if (chatState.currentUser) {
@@ -499,9 +571,13 @@ const App: React.FC = () => {
 
   const activeMessages = chatState.messages.filter(m => m.sessionId === chatState.currentSessionId);
 
+  const handleUpgradeClick = () => {
+    router.push('/membership');
+  };
+
   return (
     <div className="h-screen w-full bg-[#fcfaf8] flex font-sans text-stone-800 overflow-hidden">
-      <ConfirmationModal 
+      <ConfirmationModal
         isOpen={isClearHistoryModalOpen}
         onClose={() => setIsClearHistoryModalOpen(false)}
         onConfirm={handleClearHistory}
@@ -511,7 +587,7 @@ const App: React.FC = () => {
         confirmText="全部清空"
       />
 
-      <AuthModal 
+      <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
         onLogin={handleLogin}
@@ -532,15 +608,17 @@ const App: React.FC = () => {
 
       {/* Main Content Area - Flex Column */}
       <div className="flex-1 flex flex-col h-full relative w-full overflow-hidden transition-all">
-          <Header 
+          <Header
             user={chatState.currentUser}
             onLoginClick={() => setIsAuthModalOpen(true)}
             onLogoutClick={handleLogout}
-            onClearHistory={() => setIsClearHistoryModalOpen(true)} 
+            onClearHistory={() => setIsClearHistoryModalOpen(true)}
             showFavoritesOnly={chatState.showFavoritesOnly}
             onToggleFavorites={toggleFavoritesView}
             onToggleSidebar={handleSidebarToggle}
-            isSidebarOpen={isDesktopSidebarOpen} // Only relevant for desktop icon choice really
+            isSidebarOpen={isDesktopSidebarOpen}
+            membershipInfo={membershipInfo}
+            onUpgradeClick={handleUpgradeClick}
           />
           
           {chatState.showFavoritesOnly ? (
@@ -567,15 +645,17 @@ const App: React.FC = () => {
 
               {/* Chat Area */}
               <main className="flex-1 relative w-full mx-auto max-w-6xl">
-                <ChatInterface 
+                <ChatInterface
                   messages={activeMessages}
-                  categories={chatState.categories} 
+                  categories={chatState.categories}
                   isLoading={chatState.isLoading}
                   onSendMessage={handleSendMessage}
                   currentMode={chatState.currentMode}
-                  onSaveMessage={handleSaveMessage} 
-                  onCreateCategory={(name) => handleCreateCategory(name, chatState.currentMode)} 
+                  onSaveMessage={handleSaveMessage}
+                  onCreateCategory={(name) => handleCreateCategory(name, chatState.currentMode)}
                   onUpdateNote={handleUpdateNote}
+                  membershipInfo={membershipInfo}
+                  onUpgradeClick={handleUpgradeClick}
                 />
               </main>
             </>

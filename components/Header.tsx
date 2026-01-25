@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { GraduationCap, Sparkles, Trash2, BookOpen, Menu, LogIn, UserCircle, LogOut, ChevronDown, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { GraduationCap, Sparkles, Trash2, BookOpen, Menu, LogIn, UserCircle, LogOut, ChevronDown, PanelLeftClose, PanelLeftOpen, Crown } from 'lucide-react';
 import { User } from '../types';
+import { MembershipInfo } from '../services/membershipService';
 
 interface Props {
   user: User | null;
@@ -13,19 +14,26 @@ interface Props {
   isSidebarOpen: boolean; // Used to show different icons (optional)
   onLoginClick: () => void;
   onLogoutClick: () => void;
+  membershipInfo?: MembershipInfo | null;
+  onUpgradeClick: () => void;
 }
 
-const Header: React.FC<Props> = ({ 
+const Header: React.FC<Props> = ({
   user,
-  onClearHistory, 
-  showFavoritesOnly, 
-  onToggleFavorites, 
+  onClearHistory,
+  showFavoritesOnly,
+  onToggleFavorites,
   onToggleSidebar,
   isSidebarOpen,
   onLoginClick,
-  onLogoutClick
+  onLogoutClick,
+  membershipInfo,
+  onUpgradeClick
 }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
+
+  const isMember = membershipInfo?.membership?.status === 'active' &&
+                   membershipInfo?.membership?.type !== 'free';
 
   return (
     <header className="flex-shrink-0 bg-[#fcfaf8] sticky top-0 z-20">
@@ -54,7 +62,29 @@ const Header: React.FC<Props> = ({
         </div>
 
         <div className="flex items-center gap-2 md:gap-3">
-          
+
+          {/* Membership Button */}
+          {user && (
+            isMember ? (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-yellow-400 to-orange-500 text-white border border-yellow-300">
+                <Crown size={14} />
+                <span className="hidden md:inline">
+                  {membershipInfo?.membership?.type === 'yearly' ? '年度会员' : '月度会员'}
+                </span>
+                <span className="md:hidden">会员</span>
+              </div>
+            ) : (
+              <button
+                onClick={onUpgradeClick}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 transition-all shadow-sm"
+              >
+                <Crown size={14} />
+                <span className="hidden md:inline">开通会员</span>
+                <span className="md:hidden">会员</span>
+              </button>
+            )
+          )}
+
           {/* Notebook Toggle */}
           <button
             onClick={onToggleFavorites}

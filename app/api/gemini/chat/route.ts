@@ -2,14 +2,40 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI, GenerateContentResponse } from '@google/genai';
 import { ExamMode } from '../../../../types';
 import { SYSTEM_INSTRUCTIONS, MODEL_FLASH, MODEL_PRO } from '../../../../constants';
+import { getUserFromRequest } from '@/lib/auth';
+import { checkAndDeductUsage } from '@/lib/checkUsageLimit';
 
 const apiKey = process.env.GEMINI_API_KEY;
+console.log('GEMINI_API_KEY:', apiKey);
 if (!apiKey) {
   console.error('GEMINI_API_KEY not found in environment variables');
 }
 
 export async function POST(request: NextRequest) {
   try {
+    // 1. 验证用户登录
+    const payload = getUserFromRequest(request);
+    if (!payload) {
+      return NextResponse.json(
+        { error: '请先登录' },
+        { status: 401 }
+      );
+    }
+
+    // 2. 检查使用次数
+    const usageCheck = await checkAndDeductUsage(payload.userId);
+    if (!usageCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: usageCheck.reason,
+          needUpgrade: true,
+          remaining: usageCheck.remaining
+        },
+        { status: 403 }
+      );
+    }
+
+    // 3. 继续原有的AI调用逻辑
     if (!apiKey) {
       return NextResponse.json(
         { error: 'API Key not configured' },

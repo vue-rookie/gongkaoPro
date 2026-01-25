@@ -41,7 +41,7 @@ const UserSchema = new Schema({
   createdAt: { type: Number, default: Date.now },
   
   // Embedded Data (Document Model)
-  // In a massive scale app, messages might be in a separate collection, 
+  // In a massive scale app, messages might be in a separate collection,
   // but for a personal assistant, embedding is efficient for full-sync.
   data: {
     messages: { type: [MessageSchema], default: [] },
@@ -49,6 +49,38 @@ const UserSchema = new Schema({
     sessions: { type: [SessionSchema], default: [] },
     currentSessionId: String,
     currentMode: String
+  },
+
+  // Membership fields
+  membership: {
+    type: {
+      type: String,
+      enum: ['free', 'monthly', 'yearly'],
+      default: 'free'
+    },
+    status: {
+      type: String,
+      enum: ['active', 'expired'],
+      default: 'active'
+    },
+    startDate: Date,
+    endDate: Date
+  },
+
+  // Usage tracking
+  usage: {
+    aiCallCount: {
+      type: Number,
+      default: 0
+    },
+    freeTrialRemaining: {
+      type: Number,
+      default: 3
+    },
+    membershipUsageRemaining: {
+      type: Number,
+      default: 0
+    }
   }
 });
 
