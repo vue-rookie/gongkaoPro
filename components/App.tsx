@@ -9,12 +9,14 @@ import NotebookView from './NotebookView';
 import ConfirmationModal from './ConfirmationModal';
 import HistorySidebar from './HistorySidebar';
 import AuthModal from './AuthModal';
+import ToastContainer from './ToastContainer';
 import { ChatState, ExamMode, Message, Category, Session, User, QuizConfig } from '../types';
 import { sendMessageToGemini, generateQuiz } from '../services/geminiService';
 import { MODE_LABELS } from '../constants';
 import { v4 as uuidv4 } from 'uuid';
 import { getApiPath } from '../config/api';
 import { getMembershipInfo, MembershipInfo } from '../services/membershipService';
+import { useToast } from '../hooks/useToast';
 
 const generateId = () => Date.now().toString(36) + Math.random().toString(36).substr(2);
 
@@ -41,12 +43,16 @@ const App: React.FC = () => {
   const [isClearHistoryModalOpen, setIsClearHistoryModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [token, setToken] = useState<string>('');
   const [membershipInfo, setMembershipInfo] = useState<MembershipInfo | null>(null);
 
   // Sidebar States
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
+
+  // Toast system
+  const { toasts, showToast, removeToast } = useToast();
 
   // --- Client-side Initialization ---
   useEffect(() => {
@@ -77,12 +83,14 @@ const App: React.FC = () => {
         if (guestData) {
             setChatState({ ...defaultState, ...JSON.parse(guestData) });
             setIsInitialized(true);
+            setIsDataLoaded(true);
             return;
         }
     }
 
     setChatState(defaultState);
     setIsInitialized(true);
+    // Don't set isDataLoaded yet - wait for cloud data to load
   }, [isInitialized]);
 
   // Load membership info when user logs in
@@ -123,20 +131,29 @@ const App: React.FC = () => {
                         setChatState(prev => ({
                             ...prev,
                             ...cloudData,
-                            currentUser: prev.currentUser // Ensure user info persists
+                            currentUser: prev.currentUser, // Ensure user info persists
+                            currentSessionId: cloudData.currentSessionId || cloudData.sessions[0].id // Ensure valid session ID
                         }));
                     }
+                    setIsDataLoaded(true);
                 }
             } catch (error) {
                 console.error("Failed to sync from cloud", error);
+                setIsDataLoaded(true);
             }
+        } else if (isInitialized) {
+            // Guest mode - data already loaded from localStorage
+            setIsDataLoaded(true);
         }
     };
     fetchUserData();
-  }, [chatState.currentUser?.id]);
+  }, [chatState.currentUser?.id, isInitialized]);
 
   // 2. On Change, Save Data (Debounced logic could be added, but simple save for now)
   useEffect(() => {
+    // Don't save until data is loaded from cloud/localStorage
+    if (!isDataLoaded) return;
+
     const dataToSave = {
         messages: chatState.messages,
         categories: chatState.categories,
@@ -159,7 +176,7 @@ const App: React.FC = () => {
         // Local Sync (Guest)
         localStorage.setItem(GUEST_DATA_KEY, JSON.stringify(dataToSave));
     }
-  }, [chatState.messages, chatState.categories, chatState.sessions, chatState.currentSessionId, chatState.currentMode, chatState.currentUser]);
+  }, [chatState.messages, chatState.categories, chatState.sessions, chatState.currentSessionId, chatState.currentMode, chatState.currentUser, isDataLoaded]);
 
 
   // --- Auth Handlers ---
@@ -202,6 +219,7 @@ const App: React.FC = () => {
         ...cloudData, // Apply cloud data
         isLoading: false
     }));
+    setIsDataLoaded(true);
   };
 
   const handleLogout = () => {
@@ -209,6 +227,7 @@ const App: React.FC = () => {
     localStorage.removeItem(TOKEN_KEY);
     setToken('');
     setMembershipInfo(null);
+    setIsDataLoaded(false);
 
     // Switch to guest mode (try load guest data)
     const guestDataStr = localStorage.getItem(GUEST_DATA_KEY);
@@ -231,6 +250,9 @@ const App: React.FC = () => {
         isLoading: false,
         showFavoritesOnly: false
     });
+
+    // Set data loaded after switching to guest mode
+    setIsDataLoaded(true);
   };
 
   // --- Chat Logic ---
@@ -376,6 +398,16 @@ const App: React.FC = () => {
             isLoading: false
           }));
 
+          // 立即刷新会员信息以更新剩余次数
+          if (token && chatState.currentUser) {
+            try {
+              const updatedInfo = await getMembershipInfo(token);
+              setMembershipInfo(updatedInfo);
+            } catch (error) {
+              console.error('Failed to refresh membership info:', error);
+            }
+          }
+
       } else {
           // --- STANDARD CHAT FLOW ---
           const historyForApi = chatState.messages
@@ -392,6 +424,17 @@ const App: React.FC = () => {
             history: historyForApi,
             token
           });
+
+          // Check if login is needed
+          if (response.needLogin) {
+            setChatState(prev => ({
+              ...prev,
+              isLoading: false
+            }));
+            showToast('请先登录后再使用 AI 对话功能', 'warning');
+            setIsAuthModalOpen(true);
+            return;
+          }
 
           // Check if upgrade is needed
           if (response.needUpgrade) {
@@ -428,9 +471,30 @@ const App: React.FC = () => {
             messages: [...prev.messages, modelMsg],
             isLoading: false
           }));
+
+          // 立即刷新会员信息以更新剩余次数
+          if (token && chatState.currentUser) {
+            try {
+              const updatedInfo = await getMembershipInfo(token);
+              setMembershipInfo(updatedInfo);
+            } catch (error) {
+              console.error('Failed to refresh membership info:', error);
+            }
+          }
       }
 
     } catch (error: any) {
+      // Check if login is needed
+      if (error.message === 'NEED_LOGIN') {
+        setChatState(prev => ({
+          ...prev,
+          isLoading: false
+        }));
+        showToast('请先登录后再使用 AI 对话功能', 'warning');
+        setIsAuthModalOpen(true);
+        return;
+      }
+
       // Check if it's an upgrade error
       if (error.message && error.message.includes('免费次数已用完')) {
         const errorMsg: Message = {
@@ -592,6 +656,7 @@ const App: React.FC = () => {
         onClose={() => setIsAuthModalOpen(false)}
         onLogin={handleLogin}
         onRegister={handleRegister}
+        showToast={showToast}
       />
 
       {/* Responsive Sidebar */}
@@ -623,13 +688,14 @@ const App: React.FC = () => {
           
           {chatState.showFavoritesOnly ? (
              <main className="flex-1 relative w-full h-full overflow-hidden">
-                <NotebookView 
+                <NotebookView
                   messages={chatState.messages}
                   categories={chatState.categories}
                   onCreateCategory={handleCreateCategory}
                   onDeleteCategory={handleDeleteCategory}
                   onRemoveMessage={handleRemoveMessage}
                   onUpdateNote={handleUpdateNote}
+                  showToast={showToast}
                 />
              </main>
           ) : (
@@ -656,11 +722,15 @@ const App: React.FC = () => {
                   onUpdateNote={handleUpdateNote}
                   membershipInfo={membershipInfo}
                   onUpgradeClick={handleUpgradeClick}
+                  showToast={showToast}
                 />
               </main>
             </>
           )}
       </div>
+
+      {/* Toast Container */}
+      <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
     </div>
   );
 };

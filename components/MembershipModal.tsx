@@ -9,9 +9,10 @@ interface MembershipModalProps {
   onClose: () => void;
   token: string;
   onPaymentSuccess: () => void;
+  showToast?: (message: string, type: 'success' | 'error' | 'info' | 'warning') => void;
 }
 
-export default function MembershipModal({ isOpen, onClose, token, onPaymentSuccess }: MembershipModalProps) {
+export default function MembershipModal({ isOpen, onClose, token, onPaymentSuccess, showToast }: MembershipModalProps) {
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('monthly');
   const [loading, setLoading] = useState(false);
@@ -38,7 +39,9 @@ export default function MembershipModal({ isOpen, onClose, token, onPaymentSucce
 
   const handlePurchase = async () => {
     if (!token) {
-      alert('请先登录');
+      if (showToast) {
+        showToast('请先登录', 'warning');
+      }
       return;
     }
 
@@ -51,11 +54,15 @@ export default function MembershipModal({ isOpen, onClose, token, onPaymentSucce
         setOrderId(response.orderId!);
         setShowQRCode(true);
       } else {
-        alert(response.message || '创建订单失败');
+        if (showToast) {
+          showToast(response.message || '创建订单失败', 'error');
+        }
       }
     } catch (error) {
       console.error('创建支付订单失败:', error);
-      alert('创建订单失败，请稍后重试');
+      if (showToast) {
+        showToast('创建订单失败，请稍后重试', 'error');
+      }
     } finally {
       setLoading(false);
     }

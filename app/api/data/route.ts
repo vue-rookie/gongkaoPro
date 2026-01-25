@@ -11,7 +11,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: 'Missing data' }, { status: 400 });
     }
 
-    (User.findByIdAndUpdate as any)(userId, {
+    await (User.findByIdAndUpdate as any)(userId, {
       $set: { data: data }
     });
 

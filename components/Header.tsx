@@ -56,7 +56,13 @@ const Header: React.FC<Props> = ({
             </div>
             <div className="flex flex-col">
                 <h1 className="text-lg font-serif font-bold text-stone-800 leading-none tracking-tight">公考智囊</h1>
-                <span className="text-[10px] text-stone-400 font-medium tracking-widest">PRO</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-stone-400 font-medium tracking-widest">PRO</span>
+                  <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-gradient-to-r from-blue-500 to-purple-600">
+                    <Sparkles size={8} className="text-white" />
+                    <span className="text-[8px] font-bold text-white tracking-wide">Gemini</span>
+                  </div>
+                </div>
             </div>
           </div>
         </div>

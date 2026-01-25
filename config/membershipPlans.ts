@@ -12,11 +12,11 @@ export const MEMBERSHIP_PLANS: MembershipPlan[] = [
   {
     id: 'monthly',
     name: '普通会员',
-    price: 98,
+    price: 68,
     duration: 30,
-    usageLimit: 90,
+    usageLimit: 100,
     features: [
-      '90次AI对话',
+      '100次AI对话',
       '所有考试模式',
       '题目生成功能'
     ]
@@ -24,14 +24,15 @@ export const MEMBERSHIP_PLANS: MembershipPlan[] = [
   {
     id: 'yearly',
     name: '高级会员',
-    price: 980,
+    price: 680,
     duration: 365,
-    usageLimit: 1000,
-    discount: 17, // 相当于月均81.7元，比月度会员划算
+    usageLimit: 1200,
+    discount: 17, // 相当于月均56.7元，比月度会员划算
     features: [
-      '1000次AI对话',
+      '1200次AI对话',
       '所有考试模式',
       '题目生成功能',
+      '优先客服支持'
     ]
   }
 ];

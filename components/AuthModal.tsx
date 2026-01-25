@@ -9,9 +9,10 @@ interface Props {
   onClose: () => void;
   onLogin: (username: string, password: string) => Promise<void>;
   onRegister: (username: string, password: string, email: string, verificationCode: string) => Promise<void>;
+  showToast?: (message: string, type: 'success' | 'error' | 'info' | 'warning') => void;
 }
 
-const AuthModal: React.FC<Props> = ({ isOpen, onClose, onLogin, onRegister }) => {
+const AuthModal: React.FC<Props> = ({ isOpen, onClose, onLogin, onRegister, showToast }) => {
   const [viewMode, setViewMode] = useState<'login' | 'register' | 'resetPassword'>('login');
 
   // Form Fields
@@ -83,7 +84,9 @@ const AuthModal: React.FC<Props> = ({ isOpen, onClose, onLogin, onRegister }) =>
       }
 
       setCountdown(60); // Start 60s countdown
-      alert('验证码已发送到您的邮箱，请查收！');
+      if (showToast) {
+        showToast('验证码已发送到您的邮箱，请查收！', 'success');
+      }
     } catch (err) {
       setError('发送验证码失败，请稍后重试');
     } finally {
@@ -150,7 +153,9 @@ const AuthModal: React.FC<Props> = ({ isOpen, onClose, onLogin, onRegister }) =>
           return;
         }
 
-        alert('密码重置成功，请使用新密码登录');
+        if (showToast) {
+          showToast('密码重置成功，请使用新密码登录', 'success');
+        }
         setViewMode('login');
       }
     } catch (err: any) {

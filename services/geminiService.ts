@@ -13,6 +13,7 @@ interface GeminiResponse {
   text: string;
   quizData?: QuizQuestion[];
   needUpgrade?: boolean;
+  needLogin?: boolean;
   remaining?: number;
 }
 
@@ -45,6 +46,12 @@ export const sendMessageToGemini = async ({
 
     if (!response.ok) {
       const errorData = await response.json();
+      if (response.status === 401) {
+        return {
+          text: errorData.error || '请先登录',
+          needLogin: true
+        };
+      }
       if (response.status === 403) {
         return {
           text: errorData.error || '免费次数已用完',
@@ -88,6 +95,9 @@ export const generateQuiz = async (mode: ExamMode, topic?: string, count: number
 
     if (!response.ok) {
       const errorData = await response.json();
+      if (response.status === 401) {
+        throw new Error('NEED_LOGIN');
+      }
       if (errorData.needUpgrade) {
         throw new Error(errorData.error || '免费次数已用完，请开通会员');
       }

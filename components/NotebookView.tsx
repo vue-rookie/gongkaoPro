@@ -14,6 +14,7 @@ interface Props {
   onDeleteCategory: (id: string) => void;
   onRemoveMessage: (id: string) => void; // Unbookmark
   onUpdateNote: (id: string, note: string) => void;
+  showToast?: (message: string, type: 'success' | 'error' | 'info' | 'warning') => void;
 }
 
 const NotebookView: React.FC<Props> = ({
@@ -22,7 +23,8 @@ const NotebookView: React.FC<Props> = ({
   onCreateCategory,
   onDeleteCategory,
   onRemoveMessage,
-  onUpdateNote
+  onUpdateNote,
+  showToast
 }) => {
   const [activeTab, setActiveTab] = useState<ExamMode>(ExamMode.XING_CE);
   // selectedCategoryId: null = Root, 'UNCATEGORIZED' = Default Folder, string = Specific Category UUID
@@ -79,21 +81,23 @@ const NotebookView: React.FC<Props> = ({
 
   const handleCreateCategory = () => {
     if (!newCatName.trim()) return;
-    
+
     // Depth Limit Check: If we are in a subfolder (it has a parentId), don't allow creating another level.
     if (selectedCategoryId && selectedCategoryId !== 'UNCATEGORIZED') {
         const current = categories.find(c => c.id === selectedCategoryId);
         if (current && current.parentId) {
-             alert("为了保持知识库清晰，最多只支持两级文件夹结构。");
+             if (showToast) {
+               showToast("为了保持知识库清晰，最多只支持两级文件夹结构。", 'warning');
+             }
              return;
         }
     }
 
     // Create folder inside current selected category if it's a real category (not Uncategorized)
-    const parentId = (selectedCategoryId && selectedCategoryId !== 'UNCATEGORIZED') 
-        ? selectedCategoryId 
+    const parentId = (selectedCategoryId && selectedCategoryId !== 'UNCATEGORIZED')
+        ? selectedCategoryId
         : undefined;
-    
+
     onCreateCategory(newCatName, activeTab, parentId);
     setNewCatName('');
     setIsCreatingCat(false);

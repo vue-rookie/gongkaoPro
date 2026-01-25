@@ -24,6 +24,7 @@ interface Props {
   onUpdateNote: (id: string, note: string) => void;
   membershipInfo?: MembershipInfo | null;
   onUpgradeClick: () => void;
+  showToast?: (message: string, type: 'success' | 'error' | 'info' | 'warning') => void;
 }
 
 const ChatInterface: React.FC<Props> = ({
@@ -36,7 +37,8 @@ const ChatInterface: React.FC<Props> = ({
   onCreateCategory,
   onUpdateNote,
   membershipInfo,
-  onUpgradeClick
+  onUpgradeClick,
+  showToast
 }) => {
   const [inputText, setInputText] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -78,7 +80,9 @@ const ChatInterface: React.FC<Props> = ({
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        alert("图片大小不能超过 5MB");
+        if (showToast) {
+          showToast("图片大小不能超过 5MB", 'warning');
+        }
         return;
       }
       const reader = new FileReader();
@@ -344,18 +348,27 @@ const ChatInterface: React.FC<Props> = ({
 
             {/* Loading States */}
             {(isLoading || isQuizLoading) && (
-              <div className="flex justify-start w-full animate-pulse pl-12">
-                   <div className="bg-white border border-stone-100 px-5 py-4 rounded-2xl rounded-bl-none shadow-sm flex items-center gap-3">
+              <div className="flex justify-start w-full pl-12">
+                   <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100 px-5 py-4 rounded-2xl rounded-bl-none shadow-sm flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
                      {isQuizLoading ? (
-                         <div className="flex items-center gap-2 text-stone-600">
-                            <ScrollText size={18} className="animate-pulse" />
-                            <span className="text-sm font-medium font-serif">正在准备全真模拟卷...</span>
+                         <div className="flex items-center gap-3 text-amber-800">
+                            <ScrollText size={20} className="animate-pulse" />
+                            <div className="flex flex-col gap-1">
+                              <span className="text-sm font-semibold font-serif">正在准备全真模拟卷...</span>
+                              <span className="text-xs text-amber-700">AI 正在精心挑选题目，请稍候</span>
+                            </div>
                          </div>
                      ) : (
-                         <div className="flex gap-1">
-                            <div className="w-1.5 h-1.5 bg-stone-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
-                            <div className="w-1.5 h-1.5 bg-stone-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
-                            <div className="w-1.5 h-1.5 bg-stone-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
+                         <div className="flex items-center gap-3">
+                            <div className="flex gap-1">
+                               <div className="w-2 h-2 bg-[#da7756] rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
+                               <div className="w-2 h-2 bg-[#da7756] rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
+                               <div className="w-2 h-2 bg-[#da7756] rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              <span className="text-sm font-semibold text-amber-800">AI 正在思考中...</span>
+                              <span className="text-xs text-amber-700">分析问题并生成专业解答</span>
+                            </div>
                          </div>
                      )}
                    </div>
