@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenAI } from '@google/genai';
 import { ExamMode } from '../../../../types';
 import { MODEL_FLASH } from '../../../../constants';
 import { getUserFromRequest } from '@/lib/auth';
 import { checkAndDeductUsage } from '@/lib/checkUsageLimit';
 
 const apiKey = process.env.GEMINI_API_KEY;
+const baseUrl = process.env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com';
 if (!apiKey) {
   console.error('GEMINI_API_KEY not found in environment variables');
 }
@@ -44,7 +44,6 @@ export async function POST(request: NextRequest) {
 
     const { mode, topic, count = 5 } = await request.json();
 
-    const ai = new GoogleGenAI({ apiKey });
     const modelName = MODEL_FLASH;
     let prompt = '';
 
@@ -78,15 +77,32 @@ export async function POST(request: NextRequest) {
       `;
     }
 
-    const response = await ai.models.generateContent({
-      model: modelName,
-      contents: { parts: [{ text: prompt }] },
-      config: {
-        responseMimeType: 'application/json',
-      }
+    // 调用中转站 API
+    const apiUrl = `${baseUrl}/v1beta/models/${modelName}:generateContent`;
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey!
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{ text: prompt }]
+        }],
+        generationConfig: {
+          responseMimeType: 'application/json'
+        }
+      })
     });
 
-    const jsonText = response.text || '[]';
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API Error:', errorText);
+      throw new Error(`API request failed: ${response.status}`);
+    }
+
+    const result = await response.json();
+    const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
     const cleanJson = jsonText.replace(/^```json\s*/, '').replace(/^```\s*/, '').replace(/```$/, '').trim();
 
     const quizData = JSON.parse(cleanJson);

@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenAI, GenerateContentResponse } from '@google/genai';
 import { ExamMode } from '../../../../types';
 import { SYSTEM_INSTRUCTIONS, MODEL_FLASH, MODEL_PRO } from '../../../../constants';
 import { getUserFromRequest } from '@/lib/auth';
 import { checkAndDeductUsage } from '@/lib/checkUsageLimit';
 
 const apiKey = process.env.GEMINI_API_KEY;
-console.log('GEMINI_API_KEY:', apiKey);
+const baseUrl = process.env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com';
 if (!apiKey) {
   console.error('GEMINI_API_KEY not found in environment variables');
 }
@@ -45,28 +44,25 @@ export async function POST(request: NextRequest) {
 
     const { text, image, mode, history = [] } = await request.json();
 
-    const ai = new GoogleGenAI({ apiKey });
-
     let modelName = MODEL_FLASH;
-    let thinkingBudget: number | undefined = undefined;
 
     switch (mode) {
       case ExamMode.SHEN_LUN:
         modelName = MODEL_PRO;
-        thinkingBudget = 2048;
         break;
       case ExamMode.MIAN_SHI:
         modelName = MODEL_PRO;
-        thinkingBudget = 512;
         break;
       case ExamMode.XING_CE:
       default:
         modelName = MODEL_FLASH;
-        thinkingBudget = 1024;
         break;
     }
 
-    const parts: any[] = [{ text }];
+    // 在用户消息前加中文提示，确保模型用中文回答
+    const userMessage = `请用中文回答以下问题：\n\n${text}`;
+
+    const parts: any[] = [{ text: userMessage }];
 
     if (image) {
       const base64Data = image.includes('base64,')
@@ -81,20 +77,44 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const chat = ai.chats.create({
-      model: modelName,
-      config: {
-        systemInstruction: SYSTEM_INSTRUCTIONS[mode],
-        thinkingConfig: thinkingBudget ? { thinkingBudget } : undefined,
+    // 构建请求体
+    const contents = [
+      ...history.map((msg: any) => ({
+        role: msg.role === 'model' ? 'model' : 'user',
+        parts: msg.parts
+      })),
+      {
+        role: 'user',
+        parts
+      }
+    ];
+
+    const requestBody: any = {
+      contents,
+      systemInstruction: {
+        parts: [{ text: SYSTEM_INSTRUCTIONS[mode] }]
+      }
+    };
+
+    // 调用中转站 API
+    const apiUrl = `${baseUrl}/v1beta/models/${modelName}:generateContent`;
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey!
       },
-      history: history
+      body: JSON.stringify(requestBody)
     });
 
-    const result: GenerateContentResponse = await chat.sendMessage({
-      message: parts
-    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API Error:', errorText);
+      throw new Error(`API request failed: ${response.status}`);
+    }
 
-    const responseText = result.text || '抱歉，我无法生成回答。';
+    const result = await response.json();
+    const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text || '抱歉，我无法生成回答。';
 
     return NextResponse.json({
       text: responseText,
