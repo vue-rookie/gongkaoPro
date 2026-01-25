@@ -2,13 +2,7 @@
 
 import React from 'react';
 import Toast, { ToastType } from './Toast';
-
-export interface ToastMessage {
-  id: string;
-  message: string;
-  type: ToastType;
-  duration?: number;
-}
+import type { ToastMessage } from '../hooks/useToast';
 
 interface ToastContainerProps {
   toasts: ToastMessage[];

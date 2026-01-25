@@ -1,4 +1,68 @@
-import mongoose, { Schema, model, models } from 'mongoose';
+import mongoose, { Schema, model, models, Model, Document } from 'mongoose';
+
+// TypeScript interfaces
+interface IMessage {
+  id?: string;
+  role?: string;
+  text?: string;
+  timestamp?: number;
+  image?: string;
+  isError?: boolean;
+  isSystem?: boolean;
+  isBookmarked?: boolean;
+  categoryId?: string;
+  note?: string;
+  mode?: string;
+  sessionId?: string;
+}
+
+interface ICategory {
+  id?: string;
+  name?: string;
+  mode?: string;
+  createdAt?: number;
+  parentId?: string;
+}
+
+interface ISession {
+  id?: string;
+  title?: string;
+  updatedAt?: number;
+}
+
+interface IUserData {
+  messages?: IMessage[];
+  categories?: ICategory[];
+  sessions?: ISession[];
+  currentSessionId?: string;
+  currentMode?: string;
+}
+
+interface IMembership {
+  type?: 'free' | 'monthly' | 'yearly';
+  status?: 'active' | 'expired';
+  startDate?: Date;
+  endDate?: Date;
+}
+
+interface IUsage {
+  aiCallCount?: number;
+  freeTrialRemaining?: number;
+  membershipUsageRemaining?: number;
+}
+
+export interface IUser extends Document {
+  username: string;
+  password: string;
+  email: string;
+  emailVerified: boolean;
+  phoneNumber?: string;
+  avatar?: string;
+  createdAt: number;
+  data?: IUserData;
+  membership?: IMembership;
+  usage?: IUsage;
+}
 
 // Sub-schemas for structured data
 const MessageSchema = new Schema({
@@ -87,6 +151,6 @@ const UserSchema = new Schema({
 // Add email index for faster lookups
 UserSchema.index({ email: 1 });
 
-const User = models.User || model('User', UserSchema);
+const User = (models.User || model<IUser>('User', UserSchema)) as Model<IUser>;
 
 export default User;
