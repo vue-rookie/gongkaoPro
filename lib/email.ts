@@ -1,8 +1,10 @@
 import nodemailer from 'nodemailer';
+// server.ts / main.ts / index.ts / next.config.js
+
 
 // Debug: 检查环境变量
 console.log('EMAIL_USER:', process.env.EMAIL_USER);
-console.log('EMAIL_PASSWORD:', process.env.EMAIL_PASSWORD ? '已设置' : '未设置');
+console.log('EMAIL_PASSWORD:', process.env.EMAIL_PASSWORD);
 
 interface SendVerificationEmailOptions {
   to: string;
@@ -17,16 +19,34 @@ interface SendVerificationEmailOptions {
 export async function sendVerificationEmail(options: SendVerificationEmailOptions): Promise<void> {
   const { to, code, type } = options;
 
+  // 使用环境变量配置 SMTP 主机，支持域名或 IP
+  // 本地开发可能需要 IP，生产环境可以用域名
+  const smtpHost = process.env.SMTP_HOST || 'smtp.163.com';
+
+  console.log('SMTP Host:', smtpHost);
+
   // Create transporter inside the function
   const transporter = nodemailer.createTransport({
-    host: 'smtp.163.com',
+    host: smtpHost,
     port: 465,
-    secure: true, // 587 端口使用 STARTTLS
+    secure: true, // 使用 SSL
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASSWORD,
     },
+    tls: {
+      rejectUnauthorized: false,
+      minVersion: 'TLSv1',
+      servername: 'smtp.163.com', // SSL 握手时使用的服务器名称
+    },
+    family: 4, // 强制使用 IPv4
+    connectionTimeout: 10000, // 连接超时 10秒
+    greetingTimeout: 10000,   // 握手超时 10秒
+    socketTimeout: 15000,     // socket 超时 15秒
   });
+  console.log('开始验证 SMTP...');
+  await transporter.verify();   // 👈 加在这里
+  console.log('SMTP 验证通过');
 
   const subject = type === 'register' ? '注册验证码' : '密码重置验证码';
   const title = type === 'register' ? '欢迎注册' : '密码重置';
@@ -132,10 +152,37 @@ export async function sendVerificationEmail(options: SendVerificationEmailOption
   };
 
   try {
-    await transporter.sendMail(mailOptions);
-    console.log(`Verification email sent to ${to}`);
-  } catch (error) {
-    console.error('Error sending email:', error);
-    throw new Error('发送邮件失败，请稍后重试');
+    console.log('开始发送邮件...');
+    console.log('SMTP配置:', {
+      host: 'smtp.163.com',
+      port: 465,
+      user: process.env.EMAIL_USER,
+      to: to
+    });
+
+    // 添加超时保护
+    const sendMailPromise = transporter.sendMail(mailOptions);
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('邮件发送超时（30秒）')), 30000);
+    });
+
+    await Promise.race([sendMailPromise, timeoutPromise]);
+    console.log(`✓ 验证邮件已成功发送到 ${to}`);
+  } catch (error: any) {
+    console.error('✗ 发送邮件失败:');
+    console.error('错误类型:', error.name);
+    console.error('错误信息:', error.message);
+    console.error('完整错误:', error);
+
+    // 提供更具体的错误信息
+    if (error.message.includes('超时')) {
+      throw new Error('邮件发送超时，请检查网络连接或SMTP服务器状态');
+    } else if (error.code === 'EAUTH') {
+      throw new Error('邮箱认证失败，请检查邮箱账号和授权码');
+    } else if (error.code === 'ECONNECTION') {
+      throw new Error('无法连接到邮件服务器，请检查网络设置');
+    } else {
+      throw new Error(`发送邮件失败: ${error.message}`);
+    }
   }
 }
