@@ -36,14 +36,14 @@ export async function sendVerificationEmail(options: SendVerificationEmailOption
     },
     tls: {
       rejectUnauthorized: false,
-      minVersion: 'TLSv1',
+      minVersion: 'TLSv1' as const,
       servername: 'smtp.163.com', // SSL 握手时使用的服务器名称
     },
     family: 4, // 强制使用 IPv4
     connectionTimeout: 10000, // 连接超时 10秒
     greetingTimeout: 10000,   // 握手超时 10秒
     socketTimeout: 15000,     // socket 超时 15秒
-  });
+  } as any);
   console.log('开始验证 SMTP...');
   await transporter.verify();   // 👈 加在这里
   console.log('SMTP 验证通过');
