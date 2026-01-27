@@ -4,9 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "next dev -p 3003",
+    "dev": "next dev -p 3003 --turbo",
     "build": "next build",
-    "start": "next start -p 3003",
+    "build:analyze": "ANALYZE=true next build",
+    "start": "next start -p 3003 --turbo",
     "lint": "next lint"
   },
   "dependencies": {
