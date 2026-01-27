@@ -9,16 +9,6 @@ const nextConfig = {
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production', // 生产环境移除 console
   },
-
-  // 优化构建
-  experimental: {
-    optimizePackageImports: ['lucide-react', 'react-markdown'], // 优化大型包的导入
-  },
-
-  // 图片优化
-  images: {
-    formats: ['image/avif', 'image/webp'],
-  },
 }
 
 export default nextConfig

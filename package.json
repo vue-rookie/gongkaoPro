@@ -4,12 +4,12 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "next dev -p 3003 --turbo",
+    "dev": "next dev -p 3003",
     "build": "next build",
-    "build:analyze": "ANALYZE=true next build",
-    "start": "next start -p 3003 --turbo",
+    "start": "next start -p 3003",
     "lint": "next lint"
   },
+
   "dependencies": {
     "@google/genai": "^1.37.0",
     "bcryptjs": "^3.0.3",
