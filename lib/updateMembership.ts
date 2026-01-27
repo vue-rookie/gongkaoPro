@@ -27,25 +27,23 @@ export async function updateUserMembership(
     const currentEndDate = new Date(user.membership.endDate);
     newEndDate = new Date(currentEndDate.getTime() + plan.duration * 24 * 60 * 60 * 1000);
 
-    // 累加次数
+    // 会员无限次使用，不需要累加次数
     await User.findByIdAndUpdate(userId, {
       'membership.type': planId,
       'membership.status': 'active',
       'membership.startDate': now,
-      'membership.endDate': newEndDate,
-      $inc: { 'usage.membershipUsageRemaining': plan.usageLimit }
+      'membership.endDate': newEndDate
     });
   } else {
     // 新会员或已过期，从当前时间开始计算
     newEndDate = new Date(now.getTime() + plan.duration * 24 * 60 * 60 * 1000);
 
-    // 重置次数
+    // 会员无限次使用，不需要设置次数
     await User.findByIdAndUpdate(userId, {
       'membership.type': planId,
       'membership.status': 'active',
       'membership.startDate': now,
-      'membership.endDate': newEndDate,
-      'usage.membershipUsageRemaining': plan.usageLimit
+      'membership.endDate': newEndDate
     });
   }
 

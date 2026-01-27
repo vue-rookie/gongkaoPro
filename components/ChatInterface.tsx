@@ -168,18 +168,6 @@ const ChatInterface: React.FC<Props> = ({
         currentMode={currentMode}
       />
 
-      {/* Usage Limit Banner */}
-      {membershipInfo && (
-        <UsageLimitBanner
-          remaining={membershipInfo.usage.freeTrialRemaining}
-          isMember={membershipInfo.membership.status === 'active' && membershipInfo.membership.type !== 'free'}
-          membershipType={membershipInfo.membership.type}
-          daysRemaining={membershipInfo.membership.daysRemaining}
-          membershipUsageRemaining={membershipInfo.usage.membershipUsageRemaining}
-          onUpgrade={onUpgradeClick}
-        />
-      )}
-
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto scroll-smooth scrollbar-hide">
         {/* Content Wrapper for Alignment - Matches Input Box Width (max-w-3xl) */}
@@ -232,18 +220,24 @@ const ChatInterface: React.FC<Props> = ({
                     <div className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'} w-full`}>
                         
                         {/* Avatars */}
-                        <div className={`flex-shrink-0 w-8 h-8 rounded mt-1 flex items-center justify-center ${
-                        msg.role === 'user' 
-                            ? 'bg-stone-200 text-stone-600' 
-                            : 'bg-transparent text-stone-800'
+                        {/* <div className={`flex-shrink-0 w-8 h-8 rounded mt-1 flex items-center justify-center ${
+                        msg.role === 'user'
+                            ? 'bg-stone-200 text-stone-600'
+                            : 'bg-stone-200 text-stone-600'
                         }`}>
-                            {msg.role === 'user' ? <div className="text-xs font-bold">ME</div> : <Sparkles size={20} className="fill-stone-800" />}
-                        </div>
+                            {msg.role === 'user' ? <div className="text-xs font-bold">ME</div> : <div className="text-xs font-bold">AI</div>}
+                        </div> */}
 
                         <div className="flex flex-col min-w-0 flex-1 max-w-full">
                         {/* Render QuizPaper if quizData exists */}
                         {msg.quizData ? (
-                            <QuizPaper questions={msg.quizData} mode={msg.mode || ExamMode.XING_CE} />
+                            <div className="space-y-3">
+                              {/* Show the message text above the quiz */}
+                              <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 text-sm text-amber-900 font-medium">
+                                {msg.text}
+                              </div>
+                              <QuizPaper questions={msg.quizData} mode={msg.mode || ExamMode.XING_CE} />
+                            </div>
                         ) : (
                             <div
                                 className={`text-[15px] leading-relaxed break-words relative ${

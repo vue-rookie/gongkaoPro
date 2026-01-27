@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { GraduationCap, Sparkles, Trash2, BookOpen, Menu, LogIn, UserCircle, LogOut, ChevronDown, PanelLeftClose, PanelLeftOpen, Crown } from 'lucide-react';
 import { User } from '../types';
 import { MembershipInfo } from '../services/membershipService';
@@ -31,14 +31,26 @@ const Header: React.FC<Props> = ({
   onUpgradeClick
 }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const userButtonRef = useRef<HTMLButtonElement>(null);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
+
+  useEffect(() => {
+    if (showUserMenu && userButtonRef.current) {
+      const rect = userButtonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + 8,
+        right: window.innerWidth - rect.right
+      });
+    }
+  }, [showUserMenu]);
 
   const isMember = membershipInfo?.membership?.status === 'active' &&
                    membershipInfo?.membership?.type !== 'free';
 
   return (
-    <header className="flex-shrink-0 bg-[#fcfaf8] sticky top-0 z-20">
+    <header className="shrink-0 bg-[#fcfaf8] sticky top-0 z-12">
       <div className="w-full px-4 h-14 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center">
           {/* Menu button visible on all screens */}
           <button 
             onClick={onToggleSidebar}
@@ -54,42 +66,11 @@ const Header: React.FC<Props> = ({
             <div className="text-stone-700 hidden md:block">
                 <GraduationCap size={20} />
             </div>
-            <div className="flex flex-col">
-                <h1 className="text-lg font-serif font-bold text-stone-800 leading-none tracking-tight">公考智囊</h1>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-stone-400 font-medium tracking-widest">PRO</span>
-                  <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-gradient-to-r from-blue-500 to-purple-600">
-                    <Sparkles size={8} className="text-white" />
-                    <span className="text-[8px] font-bold text-white tracking-wide">Gemini</span>
-                  </div>
-                </div>
-            </div>
+            <h1 className="text-lg font-serif font-bold text-stone-800 leading-none tracking-tight">公考智囊</h1>
           </div>
         </div>
 
         <div className="flex items-center gap-2 md:gap-3">
-
-          {/* Membership Button */}
-          {user && (
-            isMember ? (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-yellow-400 to-orange-500 text-white border border-yellow-300">
-                <Crown size={14} />
-                <span className="hidden md:inline">
-                  {membershipInfo?.membership?.type === 'yearly' ? '年度会员' : '月度会员'}
-                </span>
-                <span className="md:hidden">会员</span>
-              </div>
-            ) : (
-              <button
-                onClick={onUpgradeClick}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 transition-all shadow-sm"
-              >
-                <Crown size={14} />
-                <span className="hidden md:inline">开通会员</span>
-                <span className="md:hidden">会员</span>
-              </button>
-            )
-          )}
 
           {/* Notebook Toggle */}
           <button
@@ -109,7 +90,8 @@ const Header: React.FC<Props> = ({
           {/* User Section */}
           {user ? (
             <div className="relative">
-              <button 
+              <button
+                ref={userButtonRef}
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 className="flex items-center gap-2 hover:bg-stone-100 rounded-full pr-2 pl-1 py-1 transition-colors border border-transparent hover:border-stone-200"
               >
@@ -123,21 +105,53 @@ const Header: React.FC<Props> = ({
               {/* User Dropdown */}
               {showUserMenu && (
                 <>
-                  <div className="fixed inset-0 z-10" onClick={() => setShowUserMenu(false)}></div>
-                  <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-stone-100 z-20 overflow-hidden animate-in slide-in-from-top-2 fade-in duration-200">
+                  <div className="fixed inset-0 z-[59]" onClick={() => setShowUserMenu(false)}></div>
+                  <div
+                    className="fixed w-56 bg-white rounded-xl shadow-xl border border-stone-100 z-[60] overflow-hidden animate-in slide-in-from-top-2 fade-in duration-200"
+                    style={{ top: `${dropdownPosition.top}px`, right: `${dropdownPosition.right}px` }}
+                  >
                      <div className="p-3 border-b border-stone-50 bg-stone-50/50">
                         <p className="text-xs text-stone-500">登录用户</p>
                         <p className="font-bold text-stone-800 truncate">{user.username}</p>
                      </div>
+
+                     {/* Membership Status */}
+                     {isMember ? (
+                       <div className="p-3 border-b border-stone-50">
+                         <div className="flex items-center gap-2 mb-1">
+                           <Crown size={14} className="text-amber-600" />
+                           <span className="text-sm font-semibold text-stone-800">
+                             {membershipInfo?.membership?.type === 'yearly' ? '年会员' : '月会员'}
+                           </span>
+                         </div>
+                         <p className="text-xs text-stone-500">
+                           剩余 {membershipInfo?.membership?.daysRemaining || 0} 天
+                         </p>
+                         <p className="text-xs text-amber-600 font-medium mt-1">
+                           无限次使用
+                         </p>
+                       </div>
+                     ) : (
+                       <div className="p-3 border-b border-stone-50">
+                         <button
+                           onClick={() => { onUpgradeClick(); setShowUserMenu(false); }}
+                           className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 transition-all"
+                         >
+                           <Crown size={14} />
+                           开通会员
+                         </button>
+                       </div>
+                     )}
+
                      <div className="p-1">
-                        <button 
+                        <button
                            onClick={() => { onClearHistory(); setShowUserMenu(false); }}
                            className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg flex items-center gap-2 transition-colors"
                         >
                            <Trash2 size={14} />
                            清空当前数据
                         </button>
-                        <button 
+                        <button
                            onClick={() => { onLogoutClick(); setShowUserMenu(false); }}
                            className="w-full text-left px-3 py-2 text-sm text-stone-600 hover:bg-stone-100 rounded-lg flex items-center gap-2 transition-colors"
                         >

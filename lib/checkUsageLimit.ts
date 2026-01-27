@@ -18,25 +18,16 @@ export async function checkAndDeductUsage(userId: string): Promise<{
   const isMember = user.membership?.endDate && new Date(user.membership.endDate) > now;
 
   if (isMember) {
-    // 会员用户：检查会员次数
-    if (user.usage?.membershipUsageRemaining > 0) {
-      await User.findByIdAndUpdate(userId, {
-        $inc: {
-          'usage.membershipUsageRemaining': -1,
-          'usage.aiCallCount': 1
-        }
-      });
-      return {
-        allowed: true,
-        remaining: user.usage.membershipUsageRemaining - 1
-      };
-    } else {
-      return {
-        allowed: false,
-        reason: '会员次数已用完，请续费或升级套餐',
-        remaining: 0
-      };
-    }
+    // 会员用户：无限次使用
+    await User.findByIdAndUpdate(userId, {
+      $inc: {
+        'usage.aiCallCount': 1
+      }
+    });
+    return {
+      allowed: true,
+      remaining: -1 // -1 表示无限次
+    };
   }
 
   // 免费用户：检查剩余次数

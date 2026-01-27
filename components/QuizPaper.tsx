@@ -15,7 +15,7 @@ const QuizPaper: React.FC<Props> = ({ questions, mode }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState<'left' | 'right'>('right');
   const [isFullscreen, setIsFullscreen] = useState(false);
-  
+
   // State
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -28,7 +28,16 @@ const QuizPaper: React.FC<Props> = ({ questions, mode }) => {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
+  // Safety check: return null if no questions
+  if (!questions || questions.length === 0) {
+    return null;
+  }
+
   const currentQ = questions[currentIndex];
+  if (!currentQ) {
+    return null;
+  }
+
   const total = questions.length;
   const isLast = currentIndex === total - 1;
   const isFirst = currentIndex === 0;
@@ -198,7 +207,7 @@ const QuizPaper: React.FC<Props> = ({ questions, mode }) => {
              ) : (
                  <div className="flex items-center gap-2">
                     <BookOpen size={18} />
-                    <span className="text-sm">{isEssayType ? '申论全真模拟' : '行测全真模拟'}</span>
+                    <span className="text-sm">{isEssayType ? '申论模拟' : '行测模拟'}</span>
                  </div>
              )}
           </div>
@@ -249,7 +258,7 @@ const QuizPaper: React.FC<Props> = ({ questions, mode }) => {
             
             {/* Start Mask */}
             {!hasStarted && !isSubmitted && (
-                <div className="absolute inset-0 z-30 bg-[#fcfaf8]/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
+                <div className="absolute inset-0 z-11 bg-[#fcfaf8]/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
                     <div className="bg-white p-8 rounded-2xl shadow-xl border border-stone-100 max-w-sm w-full">
                         <div className="w-16 h-16 bg-stone-100 rounded-full flex items-center justify-center mx-auto mb-4 text-stone-600">
                             <Clock size={32} />

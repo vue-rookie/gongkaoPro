@@ -36,8 +36,8 @@ export async function GET(request: NextRequest) {
       daysRemaining = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
     }
 
-    // 判断是否可以使用AI
-    const canUseAI = (isMember && user.usage?.membershipUsageRemaining > 0) || (user.usage?.freeTrialRemaining > 0);
+    // 判断是否可以使用AI（会员无限次使用）
+    const canUseAI = isMember || (user.usage?.freeTrialRemaining > 0);
 
     return NextResponse.json({
       success: true,

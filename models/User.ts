@@ -65,6 +65,16 @@ export interface IUser extends Document {
 }
 
 // Sub-schemas for structured data
+const QuizQuestionSchema = new Schema({
+  id: String,
+  question: String,
+  material: String,
+  options: [String],
+  answer: String,
+  analysis: String,
+  userAnswer: String
+}, { _id: false });
+
 const MessageSchema = new Schema({
   id: String,
   role: String,
@@ -77,7 +87,8 @@ const MessageSchema = new Schema({
   categoryId: String,
   note: String,
   mode: String,
-  sessionId: String
+  sessionId: String,
+  quizData: [QuizQuestionSchema]
 }, { _id: false });
 
 const CategorySchema = new Schema({

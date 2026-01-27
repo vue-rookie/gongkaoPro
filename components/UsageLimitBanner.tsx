@@ -24,7 +24,7 @@ export default function UsageLimitBanner({
         <div className="flex items-center space-x-2">
           <Crown size={16} className="text-amber-600" />
           <span className="text-sm text-stone-700">
-            {membershipType === 'yearly' ? '年度' : '月度'}会员
+            {membershipType === 'yearly' ? '年' : '月'}会员
             {daysRemaining !== undefined && (
               <span className="text-stone-500 ml-1">
                 (剩余{daysRemaining}天)
@@ -32,9 +32,6 @@ export default function UsageLimitBanner({
             )}
           </span>
         </div>
-        <span className="text-xs text-stone-600">
-          剩余 <span className="font-semibold text-stone-800">{membershipUsageRemaining}</span> 次
-        </span>
       </div>
     );
   }
