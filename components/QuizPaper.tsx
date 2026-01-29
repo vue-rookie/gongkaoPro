@@ -5,11 +5,28 @@ import { QuizQuestion, ExamMode } from '../types';
 import { ChevronLeft, ChevronRight, CheckCircle2, XCircle, Lightbulb, Trophy, BookOpen, Clock, FileCheck, Play, BookText, PenTool, Maximize2, Minimize2 } from 'lucide-react';
 import MarkdownRenderer from './MarkdownRenderer';
 import ConfirmationModal from './ConfirmationModal';
+import { GraphicStemRenderer, GraphicOptionRenderer } from './graphics/GraphicRenderer';
 
 interface Props {
   questions: QuizQuestion[];
   mode: ExamMode;
 }
+
+const tryParseGraphicData = (str: string) => {
+    try {
+        let trimmed = str.trim();
+        // Strip markdown code blocks if present
+        trimmed = trimmed.replace(/^```(json)?\s*/i, '').replace(/\s*```$/, '');
+
+        // Simple check to avoid parsing normal text
+        if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+            const data = JSON.parse(trimmed);
+            // Verify minimal structure
+            if (data.layout || data.elements) return data;
+        }
+    } catch (e) { return null; }
+    return null;
+};
 
 const QuizPaper: React.FC<Props> = ({ questions, mode }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -361,19 +378,37 @@ const QuizPaper: React.FC<Props> = ({ questions, mode }) => {
                                     {currentIndex + 1}.
                                 </span>
                                 <div className="flex-1 text-stone-800 text-[15px] md:text-[16px] leading-loose font-bold font-serif-sc tracking-wide">
-                                    <MarkdownRenderer content={processContent(currentQ.question)} className="prose-sm" />
+                                    {(() => {
+                                        const graphicStem = tryParseGraphicData(currentQ.question);
+                                        if (graphicStem && graphicStem.layout) {
+                                            return (
+                                                <div>
+                                                    <div className="mb-4 text-stone-800 font-serif text-base font-normal">
+                                                        请从所给的四个选项中，选择最合适的一个填入问号处，使之呈现一定的规律性：
+                                                    </div>
+                                                    <GraphicStemRenderer data={graphicStem} />
+                                                </div>
+                                            );
+                                        }
+                                        return <MarkdownRenderer content={processContent(currentQ.question)} className="prose-sm" />;
+                                    })()}
                                 </div>
                             </div>
                             
                             {/* Options */}
                             {!isEssayType && currentQ.options && currentQ.options.length > 0 && (
-                                <div className={`grid gap-3 ${currentQ.options.some(o => o.includes('<svg')) ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                                <div className={`grid gap-3 ${currentQ.options.some(o => o.includes('<svg') || o.trim().includes('{')) ? 'grid-cols-2' : 'grid-cols-1'}`}>
                                     {currentQ.options.map((optRaw, idx) => {
                                         // Robust Label Calculation
                                         const displayLabel = getOptionLabel(optRaw, idx);
                                         
                                         // Parse content cleanly
                                         let { content } = parseOption(optRaw);
+                                        
+                                        // Check for JSON Graphic Data
+                                        const graphicOptionData = tryParseGraphicData(content);
+                                        
+                                        // Fallback SVG check
                                         let displayContent = content.replace(/```svg/gi, '').replace(/```/g, '').trim();
                                         const isSvgOption = displayContent.startsWith('<svg');
                                         
@@ -389,7 +424,11 @@ const QuizPaper: React.FC<Props> = ({ questions, mode }) => {
                                                     {displayLabel}.
                                                 </span>
                                                 
-                                                {isSvgOption ? (
+                                                {graphicOptionData ? (
+                                                    <div className="flex-1 flex justify-center">
+                                                        <GraphicOptionRenderer data={graphicOptionData} />
+                                                    </div>
+                                                ) : isSvgOption ? (
                                                     <div className="flex-1 flex justify-center md:justify-start">
                                                         <div className="w-20 h-20 md:w-24 md:h-24 pointer-events-none" dangerouslySetInnerHTML={{__html: displayContent}} />
                                                     </div>

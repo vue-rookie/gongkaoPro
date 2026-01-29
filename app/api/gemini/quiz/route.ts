@@ -3,6 +3,7 @@ import { ExamMode } from '../../../../types';
 import { MODEL_FLASH } from '../../../../constants';
 import { getUserFromRequest } from '@/lib/auth';
 import { checkAndDeductUsage } from '@/lib/checkUsageLimit';
+const pdf = require('pdf-parse');
 
 const apiKey = process.env.GEMINI_API_KEY;
 const baseUrl = process.env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com';
@@ -42,15 +43,49 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { mode, topic, count = 5 } = await request.json();
+    let mode: ExamMode;
+    let topic: string;
+    let count: number;
+    let fileContent = '';
+
+    const contentType = request.headers.get('content-type') || '';
+
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await request.formData();
+      mode = formData.get('mode') as ExamMode;
+      topic = formData.get('topic') as string;
+      count = parseInt(formData.get('count') as string || '5');
+      
+      const file = formData.get('file') as File | null;
+      if (file) {
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+          const data = await pdf(buffer);
+          fileContent = data.text.slice(0, 30000); // Limit context window
+        } catch (e) {
+          console.error("PDF Parse Error", e);
+        }
+      }
+    } else {
+      const json = await request.json();
+      mode = json.mode;
+      topic = json.topic;
+      count = json.count || 5;
+    }
 
     const modelName = MODEL_FLASH;
     let prompt = '';
+
+    const contextInstruction = fileContent 
+      ? `\n\n【参考真题内容】：\n${fileContent}\n\n请仔细分析上述提供的真题文档的 难度系数、出题风格、语言习惯 和 考点分布。请务必生成与该文档风格和难度高度一致的题目。不要直接复制原题，而是生成“同源”的新题。`
+      : '';
 
     if (mode === ExamMode.SHEN_LUN) {
       prompt = `
         请生成 1 道【申论 (Essay Writing)】模拟题。
         主题：${topic || '社会热点'}。
+        ${contextInstruction}
 
         要求：
         1. 返回纯 JSON 数组格式，只包含 1 个对象。
@@ -62,17 +97,55 @@ export async function POST(request: NextRequest) {
       prompt = `
         请生成 ${count} 道 ${mode === ExamMode.MIAN_SHI ? '面试' : '行测'} 题目。
         主题：${topic || '随机'}。
+        **难度：极高（严格对标中国国家公务员考试(国考)及省级公务员考试(省考)真题难度）。**
 
-        要求：
+        【核心要求】：
+        1. **拒绝低幼化/简单题**：严禁生成一眼能看穿的题目。必须具备高选拔性。
+        2. **强干扰项设计**：错误选项（干扰项）必须具有极强的迷惑性。必须基于常见的思维陷阱、近义词混淆、计算易错点或逻辑漏洞来设计错误选项。禁止出现凑数的“一眼假”选项。
+        3. **分题型高标准**：
+           - **言语理解**：选材需来自官方主流媒体（如人民日报、求是）或学术文献。逻辑填空侧重实词/成语的微殊辨析；片段阅读侧重行文脉络分析，避免单纯的信息匹配。
+           - **判断推理**：
+             - **逻辑判断**：削弱/加强题要有力度区分（最能/最不能）；形式逻辑要有复杂的推理链条。
+             - **定义判断**：定义项应包含多重限定（主体、客体、手段、目的），题干设置边缘案例。
+             - **图形推理**：规律必须隐蔽且复合（如：对称性+旋转、面数量+一笔画、黑白运算+移动）。拒绝简单的单一规律。
+           - **资料分析/数量关系**：数据不能整除，必须考察估算、截位法、单位陷阱或多步计算逻辑。
+           - **常识判断**：考察知识点要细致，结合最新时政、法律细节或科技原理，避免常识性的大路货。
+
+        ${contextInstruction}
+
+        格式要求：
         1. 返回纯 JSON 数组。
-        2. 包含字段：id, question, options (数组), answer, analysis。
+        2. 包含字段：id, question, options (数组), answer, analysis (解析需详细，指出易错点)。
+        
         ${isGraphicReasoning ? `
-        3. **图形推理强制要求**：
-           - **题干**：描述规律后，必须用 \`\`\`svg ... \`\`\` 包裹 SVG 代码。
-           - **选项**：\`options\` 数组中的每一项**必须是 SVG 代码字符串**。
-           - **选项格式**：例如 ["A. <svg>...</svg>", "B. <svg>...</svg>", "C. <svg>...</svg>", "D. <svg>...</svg>"]。
-           - **严禁**使用文字描述（如"A. 一个黑点"）作为选项，必须画出来。
-           - 保持 SVG 简洁，viewBox 建议 "0 0 100 100"。
+        3. **图形推理（结构化数据模式）**：
+           为了精确渲染，请不要返回 SVG 字符串，而是返回 **JSON 结构化数据** 的字符串形式。
+           
+           - **question 字段**：请返回符合以下结构的 JSON **字符串**（注意是字符串化后的 JSON）：
+             \`\`\`json
+             {
+               "layout": "matrix_3x3" | "sequence_4" | "sequence_5",
+               "cells": [ // 题目中的图形单元格
+                 {
+                   "elements": [
+                     {
+                       "type": "dot_matrix" | "circle" | "rect" | "line",
+                       // dot_matrix 特有:
+                       "matrixRows": 3, "matrixCols": 3, "matrixData": [1,0,1, 0,1,0, 1,0,1], // 1=黑, 0=白, 2=空
+                       // 几何图形特有 (0-100 坐标系):
+                       "x": 50, "y": 50, "w": 30, "h": 30, "fill": "black"|"white"|"none", "stroke": true, "rotation": 0
+                     }
+                   ]
+                 }
+               ]
+             }
+             \`\`\`
+           
+           - **options 字段**：字符串数组，每个元素也是一个符合 \`{ "elements": [...] }\` 结构的 JSON **字符串**。
+           
+           - **典型题型举例**：
+             - **黑白点移动/叠加**：请使用 \`dot_matrix\` 类型，定义 3x3 或 4x4 网格数据。
+             - **几何规律**：使用 \`circle\`, \`rect\` 等基本图形定义位置和大小。
         ` : ''}
       `;
     }

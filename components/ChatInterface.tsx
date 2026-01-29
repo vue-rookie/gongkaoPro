@@ -360,7 +360,9 @@ const ChatInterface: React.FC<Props> = ({
                          <div className="flex items-center gap-3 text-amber-800">
                             <ScrollText size={20} className="animate-pulse" />
                             <div className="flex flex-col gap-1">
-                              <span className="text-sm font-semibold font-serif">正在准备全真模拟卷...</span>
+                              <span className="text-sm font-semibold font-serif">
+                                正在准备{currentMode === ExamMode.SHEN_LUN ? '申论' : currentMode === ExamMode.MIAN_SHI ? '面试' : '行测'}模拟题...
+                              </span>
                               <span className="text-xs text-amber-700">AI 正在精心挑选题目，请稍候</span>
                             </div>
                          </div>

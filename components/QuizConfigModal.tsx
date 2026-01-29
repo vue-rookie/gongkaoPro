@@ -85,15 +85,15 @@ const QuizConfigModal: React.FC<Props> = ({ isOpen, onClose, onStart, currentMod
         
         <div className="flex justify-between items-start mb-6">
           <div className="flex items-center gap-3">
-             <div className="bg-stone-200 text-stone-600 p-2 rounded-xl">
-               <ScrollText size={24} />
-             </div>
-             <div>
-                <h3 className="text-lg font-bold text-stone-800 font-serif">
-                    {isShenLun ? '生成申论模拟题' : '生成全真模拟卷'}
-                </h3>
-                <p className="text-xs text-stone-500 font-sans">AI 智能出题 · 计时模式</p>
-             </div>
+          <div className="bg-stone-100 p-3 rounded-2xl text-stone-600">
+            <ScrollText size={24} />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-stone-800 font-serif">
+              {currentMode === 'SHEN_LUN' ? '生成申论模拟题' : currentMode === 'MIAN_SHI' ? '生成面试模拟题' : '生成行测模拟题'}
+            </h3>
+            <p className="text-xs text-stone-400 mt-1 font-sans">AI 智能出题 · 计时模式</p>
+          </div>
           </div>
           <button onClick={onClose} className="p-1 rounded-full hover:bg-stone-200 text-stone-400 hover:text-stone-600 transition-colors">
             <X size={20} />

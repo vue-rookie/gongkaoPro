@@ -6,6 +6,7 @@ import { MODE_LABELS } from '../constants';
 import { Folder, ChevronRight, ArrowLeft, Tag, Calendar, StickyNote, Trash2, BookOpen, Bot, Star, Plus, FolderOpen, CornerUpLeft, CheckCircle2, Lightbulb, FileText, HelpCircle, BookText } from 'lucide-react';
 import MarkdownRenderer from './MarkdownRenderer';
 import ConfirmationModal from './ConfirmationModal';
+import { GraphicStemRenderer, GraphicOptionRenderer, tryParseGraphicData } from './graphics/GraphicRenderer';
 
 interface Props {
   messages: Message[];
@@ -144,7 +145,9 @@ const NotebookView: React.FC<Props> = ({
            <button onClick={() => setSelectedMessageId(null)} className="p-2 hover:bg-stone-100 rounded-full text-stone-500 transition-colors"><ArrowLeft size={20} /></button>
            <div className="flex-1">
              <h2 className="font-bold text-stone-800 text-sm md:text-base line-clamp-1 font-serif">
-                {msg.quizData && msg.quizData.length > 0 ? '全真模拟卷 · 复习模式' : '题目详情'}
+                {msg.quizData && msg.quizData.length > 0 
+                    ? `${msg.mode === ExamMode.SHEN_LUN ? '申论' : msg.mode === ExamMode.MIAN_SHI ? '面试' : '行测'}模拟题 · 复习模式` 
+                    : '题目详情'}
              </h2>
              <p className="text-xs text-stone-400 font-sans">{new Date(msg.timestamp).toLocaleString()}</p>
            </div>
@@ -213,22 +216,42 @@ const NotebookView: React.FC<Props> = ({
                                               </div>
                                           )}
 
-                                          {/* Question with Markdown Rendering (for SVG) */}
+                                          {/* Question with Graphic Support */}
                                           <div className="font-bold text-stone-800 text-lg leading-relaxed font-serif-sc">
-                                              <MarkdownRenderer content={q.question} className="prose-base" />
+                                              {(() => {
+                                                  const graphicStem = tryParseGraphicData(q.question);
+                                                  if (graphicStem && graphicStem.layout) {
+                                                      return (
+                                                          <div className="mb-4">
+                                                              <div className="mb-4 text-stone-800 font-serif text-base font-normal">
+                                                                  请从所给的四个选项中，选择最合适的一个填入问号处，使之呈现一定的规律性：
+                                                              </div>
+                                                              <div className="p-4 bg-white border border-stone-200 rounded-xl shadow-sm overflow-x-auto">
+                                                                  <GraphicStemRenderer data={graphicStem} />
+                                                              </div>
+                                                          </div>
+                                                      );
+                                                  }
+                                                  return <MarkdownRenderer content={q.question} className="prose-base" />;
+                                              })()}
                                           </div>
                                           
-                                          {/* Options (MCQ only) */}
+                                          {/* Options (MCQ only) with Graphic Support */}
                                           {q.options && (
-                                              <div className="grid grid-cols-1 gap-2">
+                                              <div className={`grid gap-3 ${q.options.some(o => o.includes('<svg') || o.trim().includes('{')) ? 'grid-cols-2' : 'grid-cols-1'}`}>
                                                   {q.options.map((opt, i) => {
-                                                      // Determine correctness for display
-                                                      const optLabel = opt.split('.')[0].trim();
-                                                      const isCorrect = optLabel === q.answer || opt.startsWith(q.answer);
+                                                      // Determine label
+                                                      const match = opt.match(/^([A-Z])\s*[.．、]\s*(.*)/s);
+                                                      const optLabel = match ? match[1] : String.fromCharCode(65 + i);
+                                                      const contentRaw = match ? match[2].trim() : opt;
 
-                                                      // Clean and check content for SVG
-                                                      let optionContent = opt.substring(opt.indexOf('.') + 1).trim();
-                                                      optionContent = optionContent.replace(/```svg/gi, '').replace(/```/g, '').trim();
+                                                      const isCorrect = optLabel === q.answer || opt.startsWith(q.answer);
+                                                      
+                                                      // Check for JSON Graphic Data
+                                                      const graphicOptionData = tryParseGraphicData(contentRaw);
+
+                                                      // Fallback SVG check
+                                                      let optionContent = contentRaw.replace(/```svg/gi, '').replace(/```/g, '').trim();
                                                       const isSvgOption = optionContent.startsWith('<svg');
                                                       
                                                       return (
@@ -239,7 +262,14 @@ const NotebookView: React.FC<Props> = ({
                                                           }`}>
                                                               <div className="flex items-center gap-2 flex-1 min-w-0">
                                                                   <span className="flex-shrink-0 font-bold font-serif">{optLabel}.</span>
-                                                                  {isSvgOption ? (
+                                                                  
+                                                                  {graphicOptionData ? (
+                                                                      <div className="flex-1 flex justify-center">
+                                                                          <div className="w-20 h-20">
+                                                                              <GraphicOptionRenderer data={graphicOptionData} />
+                                                                          </div>
+                                                                      </div>
+                                                                  ) : isSvgOption ? (
                                                                       <div className="w-16 h-16 sm:w-20 sm:h-20" dangerouslySetInnerHTML={{__html: optionContent}} />
                                                                   ) : (
                                                                       <span className="break-words font-serif">{optionContent || opt}</span>
@@ -281,7 +311,22 @@ const NotebookView: React.FC<Props> = ({
                           ))}
                       </div>
                   ) : (
-                      <MarkdownRenderer content={msg.text} />
+                      (() => {
+                          const graphicData = tryParseGraphicData(msg.text);
+                          if (graphicData && graphicData.layout) {
+                              return (
+                                  <div className="space-y-4">
+                                      <div className="text-stone-800 font-serif text-base font-normal">
+                                          请从所给的四个选项中，选择最合适的一个填入问号处，使之呈现一定的规律性：
+                                      </div>
+                                      <div className="p-4 bg-white border border-stone-200 rounded-xl shadow-sm overflow-x-auto">
+                                          <GraphicStemRenderer data={graphicData} />
+                                      </div>
+                                  </div>
+                              );
+                          }
+                          return <MarkdownRenderer content={msg.text} />;
+                      })()
                   )}
               </div>
            </div>
@@ -432,7 +477,7 @@ const NotebookView: React.FC<Props> = ({
                             {currentMessages.map(msg => {
                                 const isQuiz = msg.quizData && msg.quizData.length > 0;
                                 const title = isQuiz 
-                                    ? `[全真模拟卷] 内含 ${msg.quizData!.length} 道题目` 
+                                    ? `[${msg.mode === ExamMode.SHEN_LUN ? '申论' : msg.mode === ExamMode.MIAN_SHI ? '面试' : '行测'}模拟题] 内含 ${msg.quizData!.length} 道题目` 
                                     : getPreviewText(msg.text); // Use helper
 
                                 return (
@@ -467,7 +512,13 @@ const NotebookView: React.FC<Props> = ({
                                     {isQuiz && (
                                         <div className="text-xs text-stone-500 mb-2 bg-stone-50 p-2 rounded-lg border border-stone-100 flex items-start gap-1.5 line-clamp-1 font-serif">
                                             <HelpCircle size={12} className="flex-shrink-0 mt-0.5 text-stone-400" />
-                                            <span>Q1: {getPreviewText(msg.quizData![0].question)}</span>
+                                            <span>
+                                                Q1: {(() => {
+                                                    const qText = msg.quizData![0].question;
+                                                    const graphic = tryParseGraphicData(qText);
+                                                    return graphic && graphic.layout ? '[图形推理题] 点击查看详情' : getPreviewText(qText);
+                                                })()}
+                                            </span>
                                         </div>
                                     )}
 

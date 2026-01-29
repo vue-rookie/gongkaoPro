@@ -77,7 +77,7 @@ const SvgBlock = ({ content }: { content: string }) => {
      if (cleanSvg.endsWith('</svg>')) {
         cleanSvg = cleanSvg.substring(0, cleanSvg.lastIndexOf('</svg>'));
      }
-     cleanSvg = `<svg viewBox="0 0 400 150" xmlns="http://www.w3.org/2000/svg" stroke="black" fill="none" style="width: 100%; height: auto;">${cleanSvg}</svg>`;
+     cleanSvg = `<svg viewBox="0 0 400 100" xmlns="http://www.w3.org/2000/svg" stroke="black" fill="none" style="width: 100%; height: auto;">${cleanSvg}</svg>`;
   }
 
   return (
