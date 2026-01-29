@@ -3,6 +3,8 @@ import { ExamMode } from '../../../../types';
 import { MODEL_FLASH } from '../../../../constants';
 import { getUserFromRequest } from '@/lib/auth';
 import { checkAndDeductUsage } from '@/lib/checkUsageLimit';
+import dbConnect from '@/lib/db';
+import User from '@/models/User';
 const pdf = require('pdf-parse');
 
 const apiKey = process.env.GEMINI_API_KEY;
@@ -43,6 +45,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 4. 获取用户最近的做题历史 (防重复)
+    let recentQuestionsText = "";
+    try {
+        await dbConnect();
+        // Fetch only the messages field, slice last 20 messages to save bandwidth/memory
+        // We cast to any because the projection syntax with Mongoose + Typescript can be tricky
+        const user = await User.findById(payload.userId).select({ 'data.messages': { $slice: -20 } }).lean() as any;
+        
+        if (user && user.data && user.data.messages) {
+            const recentQuizzes = user.data.messages
+                .filter((m: any) => m.quizData && m.quizData.length > 0)
+                .flatMap((m: any) => m.quizData)
+                .map((q: any) => q.question ? q.question.substring(0, 50) : "") // Take first 50 chars as signature
+                .filter((t: string) => t.length > 5)
+                .slice(-30); // Keep last 30 questions
+            
+            if (recentQuizzes.length > 0) {
+                recentQuestionsText = recentQuizzes.join("\n- ");
+            }
+        }
+    } catch (dbError) {
+        console.warn("Failed to fetch history for dedup", dbError);
+        // Continue without dedup if DB fails
+    }
+
     let mode: ExamMode;
     let topic: string;
     let count: number;
@@ -81,11 +108,17 @@ export async function POST(request: NextRequest) {
       ? `\n\n【参考真题内容】：\n${fileContent}\n\n请仔细分析上述提供的真题文档的 难度系数、出题风格、语言习惯 和 考点分布。请务必生成与该文档风格和难度高度一致的题目。不要直接复制原题，而是生成“同源”的新题。`
       : '';
 
+    // 防重复指令
+    const dedupInstruction = recentQuestionsText 
+      ? `\n\n【避坑指南（用户近期已做过以下题目，严禁重复）】：\n- ${recentQuestionsText}\n\n请确保新生成的题目在 题干素材、数值设定、逻辑陷阱 上与上述列表完全不同。`
+      : '';
+
     if (mode === ExamMode.SHEN_LUN) {
       prompt = `
         请生成 1 道【申论 (Essay Writing)】模拟题。
         主题：${topic || '社会热点'}。
         ${contextInstruction}
+        ${dedupInstruction}
 
         要求：
         1. 返回纯 JSON 数组格式，只包含 1 个对象。
@@ -98,6 +131,7 @@ export async function POST(request: NextRequest) {
         请生成 ${count} 道 ${mode === ExamMode.MIAN_SHI ? '面试' : '行测'} 题目。
         主题：${topic || '随机'}。
         **难度：极高（严格对标中国国家公务员考试(国考)及省级公务员考试(省考)真题难度）。**
+        ${dedupInstruction}
 
         【核心要求】：
         1. **拒绝低幼化/简单题**：严禁生成一眼能看穿的题目。必须具备高选拔性。
