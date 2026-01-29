@@ -88,15 +88,13 @@ const HistorySidebar: React.FC<Props> = ({
                 </div>
                 
                 {/* Delete Button - Only visible on hover or if active */}
-                {(sortedSessions.length > 1) && (
-                    <button
-                        onClick={(e) => { e.stopPropagation(); onDeleteSession(session.id, e); }}
-                        className={`p-1.5 rounded text-stone-400 hover:text-red-600 hover:bg-stone-200 transition-colors ${currentSessionId === session.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-                        title="删除对话"
-                    >
-                        <Trash2 size={12} />
-                    </button>
-                )}
+                <button
+                    onClick={(e) => { e.stopPropagation(); onDeleteSession(session.id, e); }}
+                    className={`p-1.5 rounded text-stone-400 hover:text-red-600 hover:bg-stone-200 transition-colors ${currentSessionId === session.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                    title="删除对话"
+                >
+                    <Trash2 size={12} />
+                </button>
               </div>
             ))
           )}

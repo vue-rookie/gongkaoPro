@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'GongKao Pro - 公考智囊',
+  title: 'GongKao Pro - 有编',
   description: 'An advanced AI assistant for Chinese Civil Service Exams',
 };
 

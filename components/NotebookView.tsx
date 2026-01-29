@@ -144,7 +144,7 @@ const NotebookView: React.FC<Props> = ({
            <button onClick={() => setSelectedMessageId(null)} className="p-2 hover:bg-stone-100 rounded-full text-stone-500 transition-colors"><ArrowLeft size={20} /></button>
            <div className="flex-1">
              <h2 className="font-bold text-stone-800 text-sm md:text-base line-clamp-1 font-serif">
-                {msg.quizData ? '全真模拟卷 · 复习模式' : '题目详情'}
+                {msg.quizData && msg.quizData.length > 0 ? '全真模拟卷 · 复习模式' : '题目详情'}
              </h2>
              <p className="text-xs text-stone-400 font-sans">{new Date(msg.timestamp).toLocaleString()}</p>
            </div>
@@ -182,11 +182,11 @@ const NotebookView: React.FC<Props> = ({
                   <div className="flex items-center gap-2 mb-4 border-b border-stone-100 pb-3">
                      <div className="bg-stone-100 text-stone-600 p-1.5 rounded-lg"><Bot size={20} /></div>
                      <span className="font-bold text-stone-700 font-serif">题目与解析</span>
-                     {msg.quizData && <span className="text-xs bg-stone-100 text-stone-600 px-2 py-1 rounded-full ml-auto font-sans">共 {msg.quizData.length} 题</span>}
+                     {msg.quizData && msg.quizData.length > 0 && <span className="text-xs bg-stone-100 text-stone-600 px-2 py-1 rounded-full ml-auto font-sans">共 {msg.quizData.length} 题</span>}
                   </div>
                   
                   {/* RENDER QUIZ DATA IF AVAILABLE */}
-                  {msg.quizData ? (
+                  {msg.quizData && msg.quizData.length > 0 ? (
                       <div className="space-y-10">
                           {msg.quizData.map((q, idx) => (
                               <div key={idx} className="relative">

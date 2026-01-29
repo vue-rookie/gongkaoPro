@@ -409,9 +409,27 @@ const App: React.FC = () => {
           }
 
       } else {
-          // --- STANDARD CHAT FLOW ---
+          // --- STANDARD CHAT FLOW (STREAMING) ---
+          
+          // 1. Create a placeholder message for the model response
+          const modelMsgId = generateId();
+          const placeholderMsg: Message = {
+            id: modelMsgId,
+            role: 'model',
+            text: '', // Start empty
+            timestamp: Date.now(),
+            mode: chatState.currentMode,
+            sessionId: activeSessionId
+          };
+
+          setChatState(prev => ({
+            ...prev,
+            messages: [...prev.messages, placeholderMsg],
+            isLoading: true // Keep loading true while streaming starts
+          }));
+
           const historyForApi = chatState.messages
-            .filter(m => m.sessionId === activeSessionId && !m.isError && !m.isSystem && !m.quizData) // Filter out complex quiz messages from history to keep context clean
+            .filter(m => m.sessionId === activeSessionId && !m.isError && !m.isSystem && !m.quizData)
             .map(m => ({
               role: m.role,
               parts: [{ text: m.text }]
@@ -422,13 +440,27 @@ const App: React.FC = () => {
             image,
             mode: chatState.currentMode,
             history: historyForApi,
-            token
+            token,
+            onStream: (chunk) => {
+                // Update the specific message with new chunk
+                setChatState(prev => ({
+                    ...prev,
+                    messages: prev.messages.map(m => 
+                        m.id === modelMsgId 
+                        ? { ...m, text: m.text + chunk } 
+                        : m
+                    ),
+                    isLoading: true // Still loading (streaming)
+                }));
+            }
           });
 
           // Check if login is needed
           if (response.needLogin) {
+            // Remove the placeholder
             setChatState(prev => ({
               ...prev,
+              messages: prev.messages.filter(m => m.id !== modelMsgId),
               isLoading: false
             }));
             showToast('请先登录后再使用 AI 对话功能', 'warning');
@@ -438,6 +470,7 @@ const App: React.FC = () => {
 
           // Check if upgrade is needed
           if (response.needUpgrade) {
+             // Remove placeholder, add error message
             const errorMsg: Message = {
               id: generateId(),
               role: 'model',
@@ -449,7 +482,7 @@ const App: React.FC = () => {
             };
             setChatState(prev => ({
               ...prev,
-              messages: [...prev.messages, errorMsg],
+              messages: prev.messages.filter(m => m.id !== modelMsgId).concat(errorMsg),
               isLoading: false
             }));
             // Navigate to membership page
@@ -457,18 +490,9 @@ const App: React.FC = () => {
             return;
           }
 
-          const modelMsg: Message = {
-            id: generateId(),
-            role: 'model',
-            text: response.text,
-            timestamp: Date.now(),
-            mode: chatState.currentMode,
-            sessionId: activeSessionId
-          };
-
+          // Streaming complete
           setChatState(prev => ({
             ...prev,
-            messages: [...prev.messages, modelMsg],
             isLoading: false
           }));
 
@@ -718,6 +742,7 @@ const App: React.FC = () => {
                   onSendMessage={handleSendMessage}
                   currentMode={chatState.currentMode}
                   onSaveMessage={handleSaveMessage}
+                  onRemoveMessage={handleRemoveMessage}
                   onCreateCategory={(name) => handleCreateCategory(name, chatState.currentMode)}
                   onUpdateNote={handleUpdateNote}
                   membershipInfo={membershipInfo}

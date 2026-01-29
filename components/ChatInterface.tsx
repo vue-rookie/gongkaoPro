@@ -20,6 +20,7 @@ interface Props {
   onSendMessage: (text: string, image?: string, quizConfig?: QuizConfig) => void;
   currentMode: ExamMode;
   onSaveMessage: (id: string, categoryId: string) => void;
+  onRemoveMessage: (id: string) => void;
   onCreateCategory: (name: string) => string;
   onUpdateNote: (id: string, note: string) => void;
   membershipInfo?: MembershipInfo | null;
@@ -34,6 +35,7 @@ const ChatInterface: React.FC<Props> = ({
   onSendMessage,
   currentMode,
   onSaveMessage,
+  onRemoveMessage,
   onCreateCategory,
   onUpdateNote,
   membershipInfo,
@@ -52,6 +54,7 @@ const ChatInterface: React.FC<Props> = ({
   // Save Modal state
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [messageToSaveId, setMessageToSaveId] = useState<string | null>(null);
+  const [saveMode, setSaveMode] = useState<ExamMode>(currentMode);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -117,9 +120,15 @@ const ChatInterface: React.FC<Props> = ({
   };
 
   // --- Actions ---
-  const handleBookmarkClick = (msgId: string) => {
-     setMessageToSaveId(msgId);
-     setSaveModalOpen(true);
+  const handleBookmarkClick = (msg: Message) => {
+    if (msg.isBookmarked) {
+        onRemoveMessage(msg.id);
+        if (showToast) showToast("已取消收藏", 'info');
+    } else {
+        setMessageToSaveId(msg.id);
+        setSaveMode(msg.mode || currentMode);
+        setSaveModalOpen(true);
+    }
   };
 
   const startEditingNote = (msg: Message) => {
@@ -165,7 +174,7 @@ const ChatInterface: React.FC<Props> = ({
         }}
         onCreateCategory={onCreateCategory}
         categories={categories}
-        currentMode={currentMode}
+        currentMode={saveMode}
       />
 
       {/* Messages Area */}
@@ -178,7 +187,7 @@ const ChatInterface: React.FC<Props> = ({
                  <div className="w-16 h-16 rounded-2xl bg-stone-100 flex items-center justify-center mb-6">
                     <Sparkles size={28} className="text-stone-400" />
                  </div>
-                 <h3 className="text-xl font-serif font-bold text-stone-800 mb-2">公考智囊</h3>
+                 <h3 className="text-xl font-serif font-bold text-stone-800 mb-2">有编</h3>
                  <p className="text-stone-500 max-w-sm mb-10 leading-relaxed text-sm">
                     您的全能备考助手。<br/>
                     精通{currentMode === 'XING_CE' ? '行测逻辑与数学' : currentMode === 'SHEN_LUN' ? '申论写作与政策' : '面试技巧与模拟'}，随时为您解答。
@@ -198,7 +207,7 @@ const ChatInterface: React.FC<Props> = ({
               </div>
             )}
 
-            {messages.map((msg) => {
+            {messages.map((msg, index) => {
               if (msg.isSystem) {
                  return (
                    <div key={msg.id} className="flex justify-center py-4 animate-in fade-in zoom-in-95 duration-300">
@@ -207,6 +216,7 @@ const ChatInterface: React.FC<Props> = ({
                    </div>
                  );
               }
+
 
               const isEditing = editingNoteId === msg.id;
 
@@ -230,11 +240,11 @@ const ChatInterface: React.FC<Props> = ({
 
                         <div className="flex flex-col min-w-0 flex-1 max-w-full">
                         {/* Render QuizPaper if quizData exists */}
-                        {msg.quizData ? (
+                        {msg.quizData && msg.quizData.length > 0 ? (
                             <div className="space-y-3">
                               {/* Show the message text above the quiz */}
-                              <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 text-sm text-amber-900 font-medium">
-                                {msg.text}
+                              <div className="text-[15px] leading-relaxed text-stone-800 w-full font-serif-sc">
+                                <MarkdownRenderer content={msg.text} />
                               </div>
                               <QuizPaper questions={msg.quizData} mode={msg.mode || ExamMode.XING_CE} />
                             </div>
@@ -255,7 +265,7 @@ const ChatInterface: React.FC<Props> = ({
                                     />
                                 </div>
                                 )}
-                                {msg.role === 'model' ? (
+                                {msg.role !== 'user' ? (
                                     <MarkdownRenderer content={msg.text} />
                                 ) : (
                                     <div className="whitespace-pre-wrap font-sans">{msg.text}</div>
@@ -263,41 +273,43 @@ const ChatInterface: React.FC<Props> = ({
                             </div>
                         )}
 
-                        {/* Action Bar */}
-                        <div className={`flex items-center gap-1 mt-1 transition-opacity ${
-                            msg.role === 'user' ? 'justify-end pr-1' : 'justify-start pl-1'
-                        } opacity-0 group-hover:opacity-100`}>
-                            
-                            <button 
-                                onClick={() => handleBookmarkClick(msg.id)}
-                                className={`p-1.5 rounded transition-colors ${
-                                    msg.isBookmarked 
-                                        ? 'text-amber-600 bg-amber-50' 
-                                        : 'text-stone-400 hover:text-amber-600 hover:bg-stone-100'
-                                }`}
-                                title={msg.isBookmarked ? "已收藏" : "加入笔记本"}
-                            >
-                                <Star size={14} className={msg.isBookmarked ? "fill-current" : ""} />
-                            </button>
+                        {/* Action Bar - Hidden while streaming (if it's the last message and loading) */}
+                        {!(isLoading && index === messages.length - 1) && (
+                            <div className={`flex items-center gap-1 mt-1 transition-opacity ${
+                                msg.role === 'user' ? 'justify-end pr-1' : 'justify-start pl-1'
+                            }`}>
+                                
+                                <button 
+                                    onClick={() => handleBookmarkClick(msg)}
+                                    className={`p-1.5 rounded transition-colors ${
+                                        msg.isBookmarked 
+                                            ? 'text-amber-600 bg-amber-50' 
+                                            : 'text-stone-400 hover:text-amber-600 hover:bg-stone-100'
+                                    }`}
+                                    title={msg.isBookmarked ? "取消收藏" : "加入笔记本"}
+                                >
+                                    <Star size={14} className={msg.isBookmarked ? "fill-current" : ""} />
+                                </button>
 
-                            <button 
-                                onClick={() => startEditingNote(msg)}
-                                className={`p-1.5 rounded transition-colors ${
-                                    msg.note 
-                                        ? 'text-stone-800 bg-stone-200' 
-                                        : 'text-stone-400 hover:text-stone-800 hover:bg-stone-100'
-                                }`}
-                                title="添加笔记"
-                            >
-                                <PenLine size={14} />
-                            </button>
-                        </div>
+                                <button 
+                                    onClick={() => startEditingNote(msg)}
+                                    className={`p-1.5 rounded transition-colors ${
+                                        msg.note 
+                                            ? 'text-stone-800 bg-stone-200' 
+                                            : 'text-stone-400 hover:text-stone-800 hover:bg-stone-100'
+                                    }`}
+                                    title="添加笔记"
+                                >
+                                    <PenLine size={14} />
+                                </button>
+                            </div>
+                        )}
                       </div>
                     </div>
 
                     {/* Sticky Note */}
                     {(msg.note || isEditing) && (
-                        <div className={`relative mt-1 ml-12 max-w-sm w-full animate-in slide-in-from-top-1 fade-in duration-300 ${msg.role === 'user' ? 'mr-12 ml-auto' : ''}`}>
+                        <div className={`relative mt-1 ml-2 md:ml-12 max-w-[85vw] md:max-w-sm w-full animate-in slide-in-from-top-1 fade-in duration-300 ${msg.role === 'user' ? 'mr-2 md:mr-12 ml-auto' : ''}`}>
                             <div className="bg-[#fff9e6] border border-[#f5e6b3] rounded-lg p-3 shadow-sm text-sm relative text-stone-700">
                                 {isEditing ? (
                                     <div className="flex flex-col gap-2">
@@ -342,9 +354,9 @@ const ChatInterface: React.FC<Props> = ({
 
             {/* Loading States */}
             {(isLoading || isQuizLoading) && (
-              <div className="flex justify-start w-full pl-12">
-                   <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100 px-5 py-4 rounded-2xl rounded-bl-none shadow-sm flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                     {isQuizLoading ? (
+              <div className="flex justify-start w-full pl-1">
+                   {isQuizLoading ? (
+                       <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100 px-5 py-4 rounded-2xl rounded-bl-none shadow-sm flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
                          <div className="flex items-center gap-3 text-amber-800">
                             <ScrollText size={20} className="animate-pulse" />
                             <div className="flex flex-col gap-1">
@@ -352,20 +364,65 @@ const ChatInterface: React.FC<Props> = ({
                               <span className="text-xs text-amber-700">AI 正在精心挑选题目，请稍候</span>
                             </div>
                          </div>
-                     ) : (
-                         <div className="flex items-center gap-3">
-                            <div className="flex gap-1">
-                               <div className="w-2 h-2 bg-[#da7756] rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
-                               <div className="w-2 h-2 bg-[#da7756] rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
-                               <div className="w-2 h-2 bg-[#da7756] rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
-                            </div>
-                            <div className="flex flex-col gap-1">
-                              <span className="text-sm font-semibold text-amber-800">AI 正在思考中...</span>
-                              <span className="text-xs text-amber-700">分析问题并生成专业解答</span>
-                            </div>
-                         </div>
-                     )}
-                   </div>
+                       </div>
+                   ) : (
+                       /* Realistic Horizontal Writing Animation */
+                       <div className="p-2 pl-1 animate-in fade-in zoom-in-95 duration-300">
+                           <style>{`
+                             @keyframes drawStrokeHorizontal {
+                               0% { stroke-dashoffset: 28; opacity: 0; }
+                               10% { opacity: 1; }
+                               90% { opacity: 1; }
+                               100% { stroke-dashoffset: 0; opacity: 0; }
+                             }
+                             @keyframes penMoveHorizontal {
+                               0% { transform: translate(0, 0); }
+                               25% { transform: translate(6px, -2px); }
+                               50% { transform: translate(12px, 0px); }
+                               75% { transform: translate(18px, -2px); }
+                               100% { transform: translate(24px, 0px); }
+                             }
+                             .writing-path-horizontal {
+                               stroke-dasharray: 28;
+                               stroke-dashoffset: 28;
+                               animation: drawStrokeHorizontal 1s infinite linear;
+                             }
+                             .writing-pen-horizontal {
+                               animation: penMoveHorizontal 1s infinite linear;
+                             }
+                           `}</style>
+                           <div className="relative w-16 h-10 flex items-center">
+                               {/* The Horizontal Ink Trail */}
+                               <svg className="absolute top-1/2 left-0 -translate-y-1/2 w-full h-full" viewBox="0 0 30 16" style={{overflow: 'visible'}}>
+                                   <path 
+                                      d="M 2 8 Q 6 4, 10 8 T 18 8 T 26 8" 
+                                      fill="none" 
+                                      stroke="#57534e" 
+                                      strokeWidth="2" 
+                                      strokeLinecap="round" 
+                                      className="writing-path-horizontal" 
+                                   />
+                               </svg>
+                               
+                               {/* Smaller Realistic Pen SVG */}
+                               <div className="writing-pen-horizontal absolute top-0 left-0 -mt-6 -ml-2 z-10 pointer-events-none">
+                                   <svg width="18" height="30" viewBox="0 0 24 40" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ transform: 'rotate(45deg)', transformOrigin: '12px 40px', filter: 'drop-shadow(1px 2px 2px rgba(0,0,0,0.1))' }}>
+                                       {/* Pen Body */}
+                                       <path d="M7 0H17L16 28H8L7 0Z" fill="#44403c"/>
+                                       <path d="M7 0H9V28H8L7 0Z" fill="#57534e"/> {/* Highlight */}
+                                       
+                                       {/* Pen Grip/Collar */}
+                                       <rect x="7" y="26" width="10" height="4" fill="#d6d3d1"/>
+                                       
+                                       {/* Pen Nib */}
+                                       <path d="M8 30L12 40L16 30H8Z" fill="#e7e5e4"/>
+                                       <path d="M11.5 30L12 36L12.5 30" fill="#78716c"/> {/* Nib detail */}
+                                       <circle cx="12" cy="40" r="0.5" fill="#292524"/> {/* Tip point */}
+                                   </svg>
+                               </div>
+                           </div>
+                       </div>
+                   )}
               </div>
             )}
             <div ref={messagesEndRef} className="h-4 w-full" />

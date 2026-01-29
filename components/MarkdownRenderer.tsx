@@ -77,15 +77,17 @@ const SvgBlock = ({ content }: { content: string }) => {
      if (cleanSvg.endsWith('</svg>')) {
         cleanSvg = cleanSvg.substring(0, cleanSvg.lastIndexOf('</svg>'));
      }
-     cleanSvg = `<svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" stroke="black" fill="none" style="max-width:100%; height:auto;">${cleanSvg}</svg>`;
+     cleanSvg = `<svg viewBox="0 0 400 150" xmlns="http://www.w3.org/2000/svg" stroke="black" fill="none" style="width: 100%; height: auto;">${cleanSvg}</svg>`;
   }
 
   return (
-    <div className="relative group my-4 rounded-xl overflow-hidden border border-stone-200 bg-white">
-      <div 
-        className="p-4 flex justify-center items-center shadow-sm min-h-[150px]"
-        dangerouslySetInnerHTML={{ __html: cleanSvg }}
-      />
+    <div className="relative group my-4 rounded-xl border border-stone-200 bg-white">
+      <div className="overflow-x-auto scrollbar-hide rounded-xl">
+        <div 
+            className="p-4 flex justify-center items-center shadow-sm"
+            dangerouslySetInnerHTML={{ __html: cleanSvg }}
+        />
+      </div>
       <div className="absolute top-2 right-2 transition-opacity duration-200">
          <div className="group/tooltip relative">
             <div className="bg-stone-50/80 backdrop-blur-sm text-stone-500 p-1.5 rounded-full cursor-help hover:bg-stone-100 border border-stone-200 shadow-sm">

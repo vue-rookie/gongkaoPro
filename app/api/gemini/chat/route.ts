@@ -96,8 +96,8 @@ export async function POST(request: NextRequest) {
       }
     };
 
-    // 调用中转站 API
-    const apiUrl = `${baseUrl}/v1beta/models/${modelName}:generateContent`;
+    // 调用中转站 API (使用 streamGenerateContent)
+    const apiUrl = `${baseUrl}/v1beta/models/${modelName}:streamGenerateContent?alt=sse`;
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
@@ -108,17 +108,71 @@ export async function POST(request: NextRequest) {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('API Error:', errorText);
-      throw new Error(`API request failed: ${response.status}`);
+        const errorText = await response.text();
+        // 如果是 4xx/5xx 错误，尝试解析 JSON 并返回
+        try {
+           const errorJson = JSON.parse(errorText);
+           return NextResponse.json(errorJson, { status: response.status });
+        } catch {
+           throw new Error(`API request failed: ${response.status} ${errorText}`);
+        }
     }
 
-    const result = await response.json();
-    const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text || '抱歉，我无法生成回答。';
+    // 创建流式响应
+    const stream = new ReadableStream({
+      async start(controller) {
+        if (!response.body) {
+          controller.close();
+          return;
+        }
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
 
-    return NextResponse.json({
-      text: responseText,
-      success: true
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            const chunk = decoder.decode(value, { stream: true });
+            buffer += chunk;
+            
+            // 处理 SSE 格式数据 (data: {...})
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed || trimmed === ': keep-alive') continue;
+                if (trimmed.startsWith('data: ')) {
+                    const jsonStr = trimmed.substring(6);
+                    if (jsonStr === '[DONE]') continue;
+                    try {
+                        const json = JSON.parse(jsonStr);
+                        const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
+                        if (text) {
+                            controller.enqueue(text);
+                        }
+                    } catch (e) {
+                        console.error("Error parsing stream chunk", e);
+                    }
+                }
+            }
+          }
+        } catch (e) {
+             console.error("Stream reading error", e);
+             controller.error(e);
+        } finally {
+             controller.close();
+        }
+      }
+    });
+
+    return new NextResponse(stream, {
+        headers: {
+            'Content-Type': 'text/plain; charset=utf-8',
+            'Transfer-Encoding': 'chunked'
+        }
     });
 
   } catch (error: any) {

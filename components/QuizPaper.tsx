@@ -154,18 +154,18 @@ const QuizPaper: React.FC<Props> = ({ questions, mode }) => {
     
     if (!isSubmitted) {
         if (userAnswer === optionLabel) {
-            return "bg-[#fcf5f2] border-[#da7756] text-[#b04825] font-bold shadow-sm ring-1 ring-[#da7756]";
+            return "bg-stone-800 border-stone-800 text-white shadow-md transform scale-[1.01]";
         }
-        return "bg-white border-stone-200 hover:border-stone-400 hover:bg-stone-50 text-stone-600";
+        return "bg-white border-stone-300 hover:border-stone-500 hover:bg-stone-50 text-stone-700";
     }
 
     const correctAnswer = currentQ.answer || '';
     const isThisCorrect = optionLabel === correctAnswer || optionRaw.startsWith(correctAnswer);
     const isThisSelected = userAnswer === optionLabel;
 
-    if (isThisCorrect) return "bg-emerald-50 border-emerald-500 text-emerald-800 ring-1 ring-emerald-500 font-bold";
-    if (isThisSelected && !isThisCorrect) return "bg-red-50 border-red-500 text-red-700 ring-1 ring-red-500";
-    return "opacity-50 border-stone-100 bg-stone-50 grayscale"; 
+    if (isThisCorrect) return "bg-emerald-50 border-emerald-600 text-emerald-800 font-bold shadow-sm";
+    if (isThisSelected && !isThisCorrect) return "bg-red-50 border-red-600 text-red-800 font-bold shadow-sm";
+    return "opacity-60 bg-stone-50 border-stone-200 text-stone-400"; 
   };
 
   const getDotClass = (index: number) => {
@@ -187,12 +187,48 @@ const QuizPaper: React.FC<Props> = ({ questions, mode }) => {
   const answeredCount = Object.keys(answers).length;
 
   return (
-    <div className={`font-sans select-none transition-all duration-300 ${isFullscreen ? 'fixed inset-0 z-50 bg-[#fcfaf8] p-0' : 'w-full my-6 perspective-1000 relative'}`}>
+    <div className={`font-sans select-none transition-all duration-300 ${isFullscreen ? 'fixed inset-0 z-50 bg-[#e6e4dc] p-0' : 'w-full my-6 perspective-1000 relative'}`}>
+      <style>{`
+        .paper-texture {
+          background-color: #fffdf6;
+          background-image: linear-gradient(#f0f0f0 1px, transparent 1px);
+          background-size: 100% 2.5rem; 
+        }
+        .stamp-animation {
+          animation: stampIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+          opacity: 0;
+          transform: scale(3) rotate(-15deg);
+        }
+        @keyframes stampIn {
+          0% { opacity: 0; transform: scale(3) rotate(-15deg); }
+          50% { opacity: 1; }
+          100% { opacity: 0.8; transform: scale(1) rotate(-15deg); }
+        }
+        .sealed-line {
+          border-right: 2px dashed #d1d5db;
+          position: relative;
+        }
+        .sealed-line::after {
+          content: "绝密 ★ 启用前";
+          position: absolute;
+          top: 50%;
+          right: -14px;
+          transform: translateY(-50%) rotate(90deg);
+          font-family: "Noto Serif SC", serif;
+          font-weight: bold;
+          font-size: 14px;
+          color: #9ca3af;
+          letter-spacing: 0.5em;
+          white-space: nowrap;
+          background: #e6e4dc;
+          padding: 0 10px;
+        }
+      `}</style>
       <div 
-        className={`relative bg-white overflow-hidden flex flex-col transition-all duration-500 ${
+        className={`relative overflow-hidden flex flex-col transition-all duration-500 ${
             isFullscreen 
-            ? 'h-full w-full rounded-none border-none shadow-none' 
-            : `rounded-xl shadow-sm border border-stone-200 ${isEssayType ? 'min-h-[600px]' : 'min-h-[450px]'}`
+            ? 'h-full w-full rounded-none border-none shadow-none bg-[#fffdf6]' 
+            : `rounded-sm shadow-md border border-stone-300 bg-[#fffdf6] ${isEssayType ? 'min-h-[600px]' : 'min-h-[450px]'}`
         }`}
       >
         
@@ -254,62 +290,78 @@ const QuizPaper: React.FC<Props> = ({ questions, mode }) => {
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 p-0 relative overflow-hidden flex flex-col">
+        <div className="flex-1 p-0 relative overflow-hidden flex">
             
+            {/* Sealed Line (Fullscreen Only) */}
+            {isFullscreen && (
+                <div className="w-12 bg-[#e6e4dc] sealed-line flex-shrink-0 hidden md:block"></div>
+            )}
+
             {/* Start Mask */}
             {!hasStarted && !isSubmitted && (
-                <div className="absolute inset-0 z-11 bg-[#fcfaf8]/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
-                    <div className="bg-white p-8 rounded-2xl shadow-xl border border-stone-100 max-w-sm w-full">
-                        <div className="w-16 h-16 bg-stone-100 rounded-full flex items-center justify-center mx-auto mb-4 text-stone-600">
-                            <Clock size={32} />
+                <div className="absolute inset-0 z-11 bg-[#fcfaf8]/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
+                    <div className="bg-white p-6 rounded-sm shadow-xl border border-stone-200 max-w-xs w-full relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-[#8c2a2a] to-[#b52b2b]"></div>
+                        <div className="w-12 h-12 bg-stone-50 rounded-full flex items-center justify-center mx-auto mb-4 text-stone-500 border border-stone-100">
+                            <Clock size={20} />
                         </div>
-                        <h3 className="text-xl font-bold text-stone-800 mb-2 font-serif">准备好了吗？</h3>
-                        <p className="text-stone-500 text-sm mb-6 font-serif">
-                            共 {questions.length} 道题，{isEssayType ? '请认真阅读给定资料并作答。' : '点击下方按钮开始计时作答。'}
+                        <h3 className="text-lg font-bold text-stone-800 mb-2 font-serif tracking-widest">全真模拟</h3>
+                        <p className="text-stone-500 text-xs mb-6 font-serif leading-loose opacity-70">
+                            本卷共 {questions.length} 道题<br/>
+                            {isEssayType ? '沉浸式作答 · 智能批改' : '限时训练 · 真实考场体验'}
                         </p>
                         <button 
                             onClick={() => setHasStarted(true)}
-                            className="w-full bg-stone-800 hover:bg-stone-900 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-stone-200 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
+                            className="w-full bg-[#8c2a2a] hover:bg-[#7a2424] text-white text-sm font-bold py-2.5 px-4 rounded shadow-md shadow-red-50 transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 font-serif tracking-[0.2em]"
                         >
-                            <Play size={20} className="fill-white" />
-                            开始答题
+                            <Play size={14} className="fill-white" />
+                            开始考试
                         </button>
                     </div>
                 </div>
             )}
 
             <div 
-                className={`flex-1 flex flex-col transition-all duration-300 ease-out transform overflow-hidden ${
+                className={`flex-1 flex flex-col md:flex-row transition-all duration-300 ease-out transform overflow-hidden ${
                     isAnimating 
                     ? (direction === 'right' ? '-translate-x-10 opacity-0' : 'translate-x-10 opacity-0')
                     : 'translate-x-0 opacity-100'
                 } ${!hasStarted ? 'blur-sm opacity-50 pointer-events-none' : ''}`}
             >
-                {/* Material Section */}
+                {/* Material Section - Split View Logic */}
                 {hasMaterial && (
-                    <div className="bg-[#f8f7f4] border-b border-stone-200 p-4 md:p-6 max-h-[30vh] md:max-h-[40vh] overflow-y-auto shadow-inner relative">
-                        <div className="absolute top-0 left-0 w-1 h-full bg-[#e5e5e0]"></div>
-                        <div className="flex items-center gap-2 text-stone-800 font-bold mb-3 pl-2 font-serif">
-                             <BookText size={18} />
+                    <div className={`
+                        border-b md:border-b-0 md:border-r border-stone-300 bg-[#f4f2ec] p-6 overflow-y-auto relative
+                        ${isFullscreen ? 'md:w-1/2 h-full' : 'max-h-[30vh] md:max-h-[40vh]'}
+                    `}>
+                        <div className="flex items-center gap-2 text-[#8c2a2a] font-bold mb-4 font-serif border-b-2 border-[#8c2a2a]/20 pb-2">
+                             <BookText size={20} />
                              <span>给定资料</span>
                         </div>
-                        <div className="prose prose-sm prose-stone max-w-none leading-relaxed text-justify text-stone-700 font-serif-sc">
+                        <div className="prose prose-stone max-w-none leading-loose text-justify text-stone-800 font-serif-sc text-[15px] md:text-[16px]">
                              {currentQ.material?.split('\n').map((para, i) => (
-                                 <p key={i} className="mb-2 last:mb-0 indent-8">{para}</p>
+                                 <p key={i} className="mb-4 last:mb-0 indent-[2em]">{para}</p>
                              ))}
                         </div>
                     </div>
                 )}
 
-                <div className="p-4 md:p-6 flex-1 overflow-y-auto bg-white">
-                    {/* Max width container for better readability in fullscreen */}
-                    <div className={`mx-auto ${isFullscreen ? 'max-w-4xl' : 'w-full'}`}>
+                <div className="flex-1 p-6 md:p-8 overflow-y-auto bg-[#fffdf6] relative">
+                    {/* Paper Texture Overlay */}
+                    <div className="absolute inset-0 pointer-events-none opacity-30" 
+                         style={{backgroundImage: 'linear-gradient(#00000005 1px, transparent 1px)', backgroundSize: '100% 2rem'}}>
+                    </div>
+
+                    {/* Max width container */}
+                    <div className={`mx-auto h-full flex flex-col ${isFullscreen ? 'max-w-4xl' : 'w-full'}`}>
                         {/* Question */}
-                        <div className="mb-6">
-                            <div className="flex gap-2 mb-4">
-                                <span className="text-stone-400 flex-shrink-0 font-bold text-lg mt-1 font-serif">Q{currentIndex + 1}.</span>
-                                <div className="flex-1 text-stone-800 text-lg leading-relaxed font-bold font-serif-sc">
-                                    <MarkdownRenderer content={processContent(currentQ.question)} className="prose-base" />
+                        <div className="mb-8 relative z-10">
+                            <div className="flex gap-3 mb-5">
+                                <span className="flex-shrink-0 font-bold text-base font-serif text-[#8c2a2a] mt-1">
+                                    {currentIndex + 1}.
+                                </span>
+                                <div className="flex-1 text-stone-800 text-[15px] md:text-[16px] leading-loose font-bold font-serif-sc tracking-wide">
+                                    <MarkdownRenderer content={processContent(currentQ.question)} className="prose-sm" />
                                 </div>
                             </div>
                             
@@ -331,27 +383,27 @@ const QuizPaper: React.FC<Props> = ({ questions, mode }) => {
                                                 onClick={() => handleOptionClick(optRaw, idx)}
                                                 disabled={isSubmitted || !hasStarted}
                                                 // Font-sans and tabular-nums for perfect digit alignment
-                                                className={`w-full text-left p-4 rounded-lg border text-sm transition-all duration-200 flex items-baseline group relative overflow-hidden font-sans tabular-nums ${getOptionStyle(optRaw, idx)}`}
+                                                className={`w-full text-left p-3 rounded-sm border transition-all duration-300 flex items-baseline group relative overflow-hidden font-sans tabular-nums ${getOptionStyle(optRaw, idx)}`}
                                             >
-                                                <span className="mr-3 text-base font-bold opacity-80 flex-shrink-0 w-6 text-right leading-relaxed">
+                                                <span className="mr-3 text-sm font-bold flex-shrink-0 w-5 text-right leading-loose font-serif opacity-80">
                                                     {displayLabel}.
                                                 </span>
                                                 
                                                 {isSvgOption ? (
                                                     <div className="flex-1 flex justify-center md:justify-start">
-                                                        <div className="w-24 h-24 md:w-32 md:h-32 pointer-events-none" dangerouslySetInnerHTML={{__html: displayContent}} />
+                                                        <div className="w-20 h-20 md:w-24 md:h-24 pointer-events-none" dangerouslySetInnerHTML={{__html: displayContent}} />
                                                     </div>
                                                 ) : (
-                                                    <div className="flex-1 min-w-0 text-left break-words leading-relaxed">
+                                                    <div className="flex-1 min-w-0 text-left break-words leading-loose text-xs md:text-sm font-serif-sc tracking-wide">
                                                         <span>{displayContent}</span>
                                                     </div>
                                                 )}
 
                                                 {isSubmitted && (
-                                                    <div className="absolute top-2 right-2">
+                                                    <div className="absolute top-1/2 right-3 -translate-y-1/2">
                                                         {(displayLabel === currentQ.answer || optRaw.startsWith(currentQ.answer || '')) 
-                                                        ? <CheckCircle2 size={20} className="text-emerald-600" />
-                                                        : (answers[currentQ.id] === displayLabel ? <XCircle size={20} className="text-red-500" /> : null)
+                                                        ? <CheckCircle2 size={16} className="text-emerald-600" />
+                                                        : (answers[currentQ.id] === displayLabel ? <XCircle size={16} className="text-red-500" /> : null)
                                                         }
                                                     </div>
                                                 )}
@@ -370,15 +422,20 @@ const QuizPaper: React.FC<Props> = ({ questions, mode }) => {
                                             onChange={(e) => handleTextAnswerChange(e.target.value)}
                                             disabled={isSubmitted || !hasStarted}
                                             placeholder="请在此处输入您的作答..."
-                                            className="w-full min-h-[300px] p-4 bg-[#fcfaf8] border border-stone-200 rounded-xl focus:ring-2 focus:ring-stone-200 focus:border-stone-400 outline-none resize-none leading-relaxed text-stone-700 disabled:bg-stone-50 disabled:text-stone-400 font-serif"
+                                            className="w-full min-h-[400px] p-6 bg-transparent border border-stone-300 rounded shadow-inner outline-none resize-none leading-[2rem] text-stone-800 disabled:bg-stone-50/50 disabled:text-stone-400 font-serif-sc text-lg"
+                                            style={{
+                                                backgroundImage: 'linear-gradient(transparent 1.9rem, #e5e5e0 1.9rem)',
+                                                backgroundSize: '100% 2rem',
+                                                lineHeight: '2rem'
+                                            }}
                                             spellCheck={false}
                                         />
-                                        <div className="absolute bottom-3 right-3 text-xs text-stone-400 pointer-events-none bg-white/80 px-1 rounded font-mono">
+                                        <div className="absolute bottom-4 right-4 text-xs text-stone-400 pointer-events-none bg-white/80 px-2 py-1 border border-stone-200 rounded font-mono">
                                             {(answers[currentQ.id] || '').length} 字
                                         </div>
                                     </div>
                                     {!isSubmitted && (
-                                        <p className="text-xs text-stone-400 flex items-center gap-1 font-sans">
+                                        <p className="text-xs text-stone-500 flex items-center gap-1 font-sans">
                                             <PenTool size={12} />
                                             申论/面试为主观题，交卷后系统将提供参考范文供您自我批改。
                                         </p>
@@ -389,44 +446,59 @@ const QuizPaper: React.FC<Props> = ({ questions, mode }) => {
 
                         {/* Analysis */}
                         {isSubmitted && (
-                            <div className="mt-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-4">
-                                <div className={`rounded-xl border p-5 shadow-sm relative overflow-hidden bg-stone-50 border-stone-200`}>
-                                    <div className="absolute top-0 right-0 p-2 opacity-5">
-                                        <Lightbulb size={64} className="text-stone-800" />
+                            <div className="mt-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-4 relative">
+                                {/* Score Stamp Animation */}
+                                {!isEssayType && score > 0 && (
+                                    <div className="absolute -top-6 right-4 z-20 stamp-animation pointer-events-none">
+                                        <div className="w-24 h-24 rounded-full border-4 border-[#d32f2f] flex flex-col items-center justify-center text-[#d32f2f] bg-white/10 backdrop-blur-[1px] shadow-sm transform rotate-[-12deg]">
+                                            <div className="w-[88px] h-[88px] rounded-full border border-[#d32f2f] flex flex-col items-center justify-center">
+                                                <span className="text-xs font-bold tracking-widest uppercase mb-1">得分</span>
+                                                <span className="text-3xl font-black font-serif">{Math.round((score / total) * 100)}</span>
+                                                <span className="text-[10px] tracking-widest mt-1">GONGKAO</span>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <h4 className={`font-bold text-sm mb-4 flex items-center gap-2 text-stone-800 font-serif`}>
-                                        <CheckCircle2 size={16} /> 
+                                )}
+
+                                <div className={`rounded border p-6 shadow-sm relative overflow-hidden bg-[#fffdf6] border-stone-300`}>
+                                    <h4 className={`font-bold text-lg mb-6 flex items-center gap-2 text-[#8c2a2a] font-serif border-b border-[#8c2a2a]/20 pb-3`}>
+                                        <Trophy size={20} /> 
                                         {isEssayType ? '参考范文与解析' : '答案与解析'}
                                     </h4>
                                     
                                     {isEssayType ? (
-                                        <div className="space-y-4">
+                                        <div className="space-y-6">
                                             <div>
-                                                <span className="text-xs font-bold text-stone-500 bg-stone-200 px-2 py-0.5 rounded uppercase mb-1 inline-block font-sans">参考范文</span>
-                                                <div className="prose prose-sm prose-stone text-stone-800 bg-white p-4 rounded-lg border border-stone-100 font-serif-sc">
+                                                <span className="text-sm font-bold text-stone-800 border-l-4 border-[#8c2a2a] pl-2 mb-2 inline-block font-serif">参考范文</span>
+                                                <div className="prose prose-stone text-stone-800 bg-white p-6 rounded border border-stone-200 font-serif-sc leading-loose">
                                                     <MarkdownRenderer content={currentQ.answer} />
                                                 </div>
                                             </div>
                                             <div>
-                                                <span className="text-xs font-bold text-stone-400 bg-stone-100 px-2 py-0.5 rounded uppercase mb-1 inline-block font-sans">名师解析</span>
-                                                <div className="prose prose-sm text-stone-600 font-serif-sc">
+                                                <span className="text-sm font-bold text-stone-600 border-l-4 border-stone-400 pl-2 mb-2 inline-block font-serif">名师解析</span>
+                                                <div className="prose prose-sm text-stone-600 font-serif-sc leading-relaxed">
                                                     <MarkdownRenderer content={currentQ.analysis} />
                                                 </div>
                                             </div>
                                         </div>
                                     ) : (
                                         <>
-                                            <div className="text-sm text-stone-800 leading-relaxed mb-2 font-serif">
-                                                <span className="font-bold">参考答案：</span> {currentQ.answer}
-                                            </div>
-                                            {currentQ.options && (
-                                                <div className={`text-sm mb-3 font-bold font-serif ${answers[currentQ.id] === currentQ.answer ? 'text-emerald-600' : 'text-red-600'}`}>
-                                                    你的选择：{answers[currentQ.id] || '未作答'}
+                                            <div className="flex gap-8 mb-4 font-serif text-lg">
+                                                <div className="text-stone-800">
+                                                    <span className="font-bold">参考答案：</span> 
+                                                    <span className="text-[#8c2a2a] font-bold">{currentQ.answer}</span>
                                                 </div>
-                                            )}
-                                            <div className="h-px bg-stone-200 my-3"></div>
-                                            <div className="prose prose-sm prose-stone text-stone-700 font-serif-sc">
-                                                <MarkdownRenderer content={processContent(currentQ.analysis)} />
+                                                <div className={`${answers[currentQ.id] === currentQ.answer ? 'text-emerald-700' : 'text-red-700'}`}>
+                                                    <span className="font-bold">你的选择：</span>
+                                                    <span className="font-bold">{answers[currentQ.id] || '未作答'}</span>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="bg-[#f4f2ec] p-4 rounded border border-stone-200">
+                                                <span className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-2 block">解析</span>
+                                                <div className="prose prose-stone text-stone-700 font-serif-sc leading-relaxed">
+                                                    <MarkdownRenderer content={processContent(currentQ.analysis)} />
+                                                </div>
                                             </div>
                                         </>
                                     )}

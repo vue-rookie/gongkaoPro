@@ -66,7 +66,7 @@ const Header: React.FC<Props> = ({
             <div className="text-stone-700 hidden md:block">
                 <GraduationCap size={20} />
             </div>
-            <h1 className="text-lg font-serif font-bold text-stone-800 leading-none tracking-tight">公考智囊</h1>
+            <h1 className="text-lg font-serif font-bold text-stone-800 leading-none tracking-tight">有编</h1>
           </div>
         </div>
 
@@ -83,8 +83,8 @@ const Header: React.FC<Props> = ({
             title="查看笔记本"
           >
             <BookOpen size={14} className={showFavoritesOnly ? "text-amber-700" : "text-stone-500"} />
-            <span className="hidden md:inline">{showFavoritesOnly ? '返回对话' : '笔记本'}</span>
-            <span className="md:hidden">{showFavoritesOnly ? '返回' : '笔记'}</span>
+            <span className="hidden md:inline cursor-pointer">{showFavoritesOnly ? '返回对话' : '笔记本'}</span>
+            <span className="md:hidden cursor-pointer">{showFavoritesOnly ? '返回' : '笔记'}</span>
           </button>
 
           {/* User Section */}

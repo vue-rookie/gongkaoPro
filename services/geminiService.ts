@@ -7,6 +7,7 @@ interface SendMessageParams {
   mode: ExamMode;
   history?: { role: 'user' | 'model'; parts: { text: string }[] }[];
   token?: string;
+  onStream?: (text: string) => void;
 }
 
 interface GeminiResponse {
@@ -22,7 +23,8 @@ export const sendMessageToGemini = async ({
   image,
   mode,
   history = [],
-  token
+  token,
+  onStream
 }: SendMessageParams): Promise<GeminiResponse> => {
   try {
     const headers: Record<string, string> = {
@@ -62,10 +64,28 @@ export const sendMessageToGemini = async ({
       throw new Error(errorData.error || 'AI 服务暂时不可用');
     }
 
-    const data = await response.json();
-    return {
-      text: data.text
-    };
+    // Stream Handling
+    if (response.body) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let fullText = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            const chunk = decoder.decode(value, { stream: true });
+            fullText += chunk;
+            if (onStream) {
+                onStream(chunk);
+            }
+        }
+        return { text: fullText };
+    } else {
+        // Fallback (unlikely with current backend)
+        const text = await response.text();
+        return { text };
+    }
 
   } catch (error) {
     console.error("Gemini API Error:", error);
@@ -104,8 +124,38 @@ export const generateQuiz = async (mode: ExamMode, topic?: string, count: number
       throw new Error(errorData.error || '无法生成题目');
     }
 
-    const data = await response.json();
-    return data.quizData;
+    // Read the stream
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error("No response body");
+    
+    const decoder = new TextDecoder();
+    let jsonText = '';
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        jsonText += decoder.decode(value, { stream: true });
+    }
+
+    // Clean and Parse JSON
+    const cleanJson = jsonText.replace(/^```json\s*/, '').replace(/^```\s*/, '').replace(/```$/, '').trim();
+    let quizData: QuizQuestion[] = [];
+    
+    try {
+        quizData = JSON.parse(cleanJson);
+    } catch (e) {
+        console.error("JSON Parse Error:", e);
+        console.log("Received Text:", jsonText);
+        throw new Error("题目生成格式错误，请重试");
+    }
+
+    // Post-processing (Add IDs if missing)
+    const processedData = quizData.map((q: any, index: number) => ({
+      ...q,
+      id: q.id || `quiz-${Date.now()}-${index}`
+    }));
+
+    return processedData;
 
   } catch (error) {
     console.error("Quiz Generation Error:", error);
