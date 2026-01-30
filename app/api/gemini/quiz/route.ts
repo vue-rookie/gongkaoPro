@@ -5,7 +5,6 @@ import { getUserFromRequest } from '@/lib/auth';
 import { checkAndDeductUsage } from '@/lib/checkUsageLimit';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
-const pdf = require('pdf-parse');
 
 const apiKey = process.env.GEMINI_API_KEY;
 const baseUrl = process.env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com';
@@ -70,43 +69,13 @@ export async function POST(request: NextRequest) {
         // Continue without dedup if DB fails
     }
 
-    let mode: ExamMode;
-    let topic: string;
-    let count: number;
-    let fileContent = '';
-
-    const contentType = request.headers.get('content-type') || '';
-
-    if (contentType.includes('multipart/form-data')) {
-      const formData = await request.formData();
-      mode = formData.get('mode') as ExamMode;
-      topic = formData.get('topic') as string;
-      count = parseInt(formData.get('count') as string || '5');
-      
-      const file = formData.get('file') as File | null;
-      if (file) {
-        try {
-          const arrayBuffer = await file.arrayBuffer();
-          const buffer = Buffer.from(arrayBuffer);
-          const data = await pdf(buffer);
-          fileContent = data.text.slice(0, 30000); // Limit context window
-        } catch (e) {
-          console.error("PDF Parse Error", e);
-        }
-      }
-    } else {
-      const json = await request.json();
-      mode = json.mode;
-      topic = json.topic;
-      count = json.count || 5;
-    }
+    const json = await request.json();
+    const mode: ExamMode = json.mode;
+    const topic: string = json.topic;
+    const count: number = json.count || 5;
 
     const modelName = MODEL_FLASH;
     let prompt = '';
-
-    const contextInstruction = fileContent 
-      ? `\n\n【参考真题内容】：\n${fileContent}\n\n请仔细分析上述提供的真题文档的 难度系数、出题风格、语言习惯 和 考点分布。请务必生成与该文档风格和难度高度一致的题目。不要直接复制原题，而是生成“同源”的新题。`
-      : '';
 
     // 防重复指令
     const dedupInstruction = recentQuestionsText 
@@ -117,7 +86,6 @@ export async function POST(request: NextRequest) {
       prompt = `
         请生成 1 道【申论 (Essay Writing)】模拟题。
         主题：${topic || '社会热点'}。
-        ${contextInstruction}
         ${dedupInstruction}
 
         要求：
@@ -135,7 +103,7 @@ export async function POST(request: NextRequest) {
 
         【核心要求】：
         1. **拒绝低幼化/简单题**：严禁生成一眼能看穿的题目。必须具备高选拔性。
-        2. **强干扰项设计**：错误选项（干扰项）必须具有极强的迷惑性。必须基于常见的思维陷阱、近义词混淆、计算易错点或逻辑漏洞来设计错误选项。禁止出现凑数的“一眼假”选项。
+        2. **强干扰项设计**：错误选项（干扰项）必须具有极强的迷惑性。必须基于常见的思维陷阱、近义词混淆、计算易错点或逻辑漏洞来设计错误选项。禁止出现凑数的"一眼假"选项。
         3. **分题型高标准**：
            - **言语理解**：选材需来自官方主流媒体（如人民日报、求是）或学术文献。逻辑填空侧重实词/成语的微殊辨析；片段阅读侧重行文脉络分析，避免单纯的信息匹配。
            - **判断推理**：
@@ -144,8 +112,6 @@ export async function POST(request: NextRequest) {
              - **图形推理**：规律必须隐蔽且复合（如：对称性+旋转、面数量+一笔画、黑白运算+移动）。拒绝简单的单一规律。
            - **资料分析/数量关系**：数据不能整除，必须考察估算、截位法、单位陷阱或多步计算逻辑。
            - **常识判断**：考察知识点要细致，结合最新时政、法律细节或科技原理，避免常识性的大路货。
-
-        ${contextInstruction}
 
         格式要求：
         1. 返回纯 JSON 数组。
