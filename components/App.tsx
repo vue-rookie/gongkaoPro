@@ -79,9 +79,12 @@ const App: React.FC = () => {
 
     // 2. If Guest, try load local data
     if (!savedUser) {
-        const guestData = localStorage.getItem(GUEST_DATA_KEY);
-        if (guestData) {
-            setChatState({ ...defaultState, ...JSON.parse(guestData) });
+        const guestDataStr = localStorage.getItem(GUEST_DATA_KEY);
+        if (guestDataStr) {
+            const guestData = JSON.parse(guestDataStr);
+            // Exclude currentMode to prevent defaulting to incorrect tabs (like Interview)
+            const { currentMode, ...restGuestData } = guestData;
+            setChatState({ ...defaultState, ...restGuestData });
             setIsInitialized(true);
             setIsDataLoaded(true);
             return;
@@ -128,9 +131,11 @@ const App: React.FC = () => {
                 if (res.ok) {
                     const cloudData = await res.json();
                     if (cloudData && cloudData.sessions && cloudData.sessions.length > 0) {
+                        // Exclude currentMode from cloud sync
+                        const { currentMode, ...restCloudData } = cloudData;
                         setChatState(prev => ({
                             ...prev,
-                            ...cloudData,
+                            ...restCloudData,
                             currentUser: prev.currentUser, // Ensure user info persists
                             currentSessionId: cloudData.currentSessionId || cloudData.sessions[0].id // Ensure valid session ID
                         }));
@@ -212,11 +217,12 @@ const App: React.FC = () => {
     localStorage.setItem(TOKEN_KEY, authToken);
     setToken(authToken);
 
-    // Merge Cloud Data
+    // Merge Cloud Data (excluding currentMode)
+    const { currentMode, ...restCloudData } = cloudData || {};
     setChatState(prev => ({
         ...prev,
         currentUser: user,
-        ...cloudData, // Apply cloud data
+        ...restCloudData, // Apply cloud data
         isLoading: false
     }));
     setIsDataLoaded(true);
@@ -646,6 +652,14 @@ const App: React.FC = () => {
     }));
   };
 
+  const handleDeleteMessage = (messageId: string) => {
+    setChatState(prev => ({
+      ...prev,
+      messages: prev.messages.filter(msg => msg.id !== messageId)
+    }));
+    showToast("消息已删除", "success");
+  };
+
   const handleUpdateNote = (messageId: string, noteContent: string) => {
     setChatState(prev => ({
       ...prev,
@@ -743,6 +757,7 @@ const App: React.FC = () => {
                   currentMode={chatState.currentMode}
                   onSaveMessage={handleSaveMessage}
                   onRemoveMessage={handleRemoveMessage}
+                  onDeleteMessage={handleDeleteMessage}
                   onCreateCategory={(name) => handleCreateCategory(name, chatState.currentMode)}
                   onUpdateNote={handleUpdateNote}
                   membershipInfo={membershipInfo}

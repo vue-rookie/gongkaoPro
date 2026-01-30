@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { MessageSquarePlus, Trash2, X, Clock } from 'lucide-react';
 import { Session } from '../types';
+import ConfirmationModal from './ConfirmationModal';
 
 interface Props {
   isMobileOpen: boolean;
@@ -25,6 +26,9 @@ const HistorySidebar: React.FC<Props> = ({
   onCreateSession,
   onDeleteSession
 }) => {
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [sessionToDeleteId, setSessionToDeleteId] = useState<string | null>(null);
+
   // Sort sessions by update time (newest first)
   const sortedSessions = [...sessions].sort((a, b) => b.updatedAt - a.updatedAt);
 
@@ -33,6 +37,22 @@ const HistorySidebar: React.FC<Props> = ({
     const now = new Date();
     const isToday = date.toDateString() === now.toDateString();
     return isToday ? date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : date.toLocaleDateString();
+  };
+
+  const handleDeleteClick = (sessionId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSessionToDeleteId(sessionId);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = () => {
+      if (sessionToDeleteId) {
+          // Create a mock event since onDeleteSession expects one, but we don't need it here really
+          const mockEvent = {} as React.MouseEvent;
+          onDeleteSession(sessionToDeleteId, mockEvent);
+          setDeleteModalOpen(false);
+          setSessionToDeleteId(null);
+      }
   };
 
   // Shared Content for both Mobile and Desktop sidebars
@@ -89,7 +109,7 @@ const HistorySidebar: React.FC<Props> = ({
                 
                 {/* Delete Button - Only visible on hover or if active */}
                 <button
-                    onClick={(e) => { e.stopPropagation(); onDeleteSession(session.id, e); }}
+                    onClick={(e) => handleDeleteClick(session.id, e)}
                     className={`p-1.5 rounded text-stone-400 hover:text-red-600 hover:bg-stone-200 transition-colors ${currentSessionId === session.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
                     title="删除对话"
                 >
@@ -109,6 +129,16 @@ const HistorySidebar: React.FC<Props> = ({
 
   return (
     <>
+      <ConfirmationModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+        title="删除对话"
+        message="删除后将无法恢复此对话记录。是否继续？"
+        confirmText="删除"
+        isDangerous={true}
+      />
+
       {/* Mobile Sidebar (Drawer Overlay) */}
       <div className={`md:hidden fixed inset-0 z-50 transition-opacity duration-300 ${isMobileOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
           {/* Backdrop */}

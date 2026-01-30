@@ -6,11 +6,12 @@ import MarkdownRenderer from './MarkdownRenderer';
 import SaveToNotebookModal from './SaveToNotebookModal';
 import QuizPaper from './QuizPaper';
 import QuizConfigModal from './QuizConfigModal';
+import ConfirmationModal from './ConfirmationModal';
 import UsageLimitBanner from './UsageLimitBanner';
 import { MODE_LABELS } from '../constants';
 import { generateQuiz } from '../services/geminiService';
 import { v4 as uuidv4 } from 'uuid';
-import { Send, Image as ImageIcon, Loader2, X, Bot, Sparkles, Plus, ArrowLeftRight, Star, StickyNote, PenLine, Check, Tag, ScrollText } from 'lucide-react';
+import { Send, Image as ImageIcon, Loader2, X, Bot, Sparkles, Plus, ArrowLeftRight, Star, StickyNote, PenLine, Check, Tag, ScrollText, Trash2 } from 'lucide-react';
 import { MembershipInfo } from '../services/membershipService';
 
 interface Props {
@@ -21,6 +22,7 @@ interface Props {
   currentMode: ExamMode;
   onSaveMessage: (id: string, categoryId: string) => void;
   onRemoveMessage: (id: string) => void;
+  onDeleteMessage: (id: string) => void;
   onCreateCategory: (name: string) => string;
   onUpdateNote: (id: string, note: string) => void;
   membershipInfo?: MembershipInfo | null;
@@ -36,6 +38,7 @@ const ChatInterface: React.FC<Props> = ({
   currentMode,
   onSaveMessage,
   onRemoveMessage,
+  onDeleteMessage,
   onCreateCategory,
   onUpdateNote,
   membershipInfo,
@@ -55,6 +58,10 @@ const ChatInterface: React.FC<Props> = ({
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [messageToSaveId, setMessageToSaveId] = useState<string | null>(null);
   const [saveMode, setSaveMode] = useState<ExamMode>(currentMode);
+
+  // Delete Modal State
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [msgToDeleteId, setMsgToDeleteId] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -112,6 +119,35 @@ const ChatInterface: React.FC<Props> = ({
     setIsQuizLoading(false); // App.tsx will set its own loading state
   };
 
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (items) {
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          const file = items[i].getAsFile();
+          if (file) {
+            // Validate size
+             if (file.size > 5 * 1024 * 1024) {
+                if (showToast) {
+                  showToast("图片大小不能超过 5MB", 'warning');
+                }
+                return;
+              }
+              
+              const reader = new FileReader();
+              reader.onloadend = () => {
+                setSelectedImage(reader.result as string);
+              };
+              reader.readAsDataURL(file);
+              // Prevent default paste behavior (optional, prevents binary text paste)
+              e.preventDefault();
+              return; // Only handle the first image found
+          }
+        }
+      }
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -141,6 +177,19 @@ const ChatInterface: React.FC<Props> = ({
     setEditingNoteId(null);
   };
 
+  const handleDeleteClick = (id: string) => {
+    setMsgToDeleteId(id);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (msgToDeleteId) {
+      onDeleteMessage(msgToDeleteId);
+      setDeleteModalOpen(false);
+      setMsgToDeleteId(null);
+    }
+  };
+
   const getSuggestions = () => {
     switch (currentMode) {
       case ExamMode.XING_CE:
@@ -163,6 +212,17 @@ const ChatInterface: React.FC<Props> = ({
          onClose={() => setIsQuizConfigOpen(false)}
          onStart={handleQuizConfigStart}
          currentMode={currentMode}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+        title="确认删除"
+        message="删除后将无法恢复，且笔记本中的收藏也会同步移除。是否继续？"
+        confirmText="删除"
+        isDangerous={true}
       />
 
       {/* Save Modal */}
@@ -301,6 +361,14 @@ const ChatInterface: React.FC<Props> = ({
                                     title="添加笔记"
                                 >
                                     <PenLine size={14} />
+                                </button>
+
+                                <button 
+                                    onClick={() => handleDeleteClick(msg.id)}
+                                    className="p-1.5 rounded transition-colors text-stone-400 hover:text-red-600 hover:bg-red-50"
+                                    title="删除消息"
+                                >
+                                    <Trash2 size={14} />
                                 </button>
                             </div>
                         )}
@@ -451,8 +519,15 @@ const ChatInterface: React.FC<Props> = ({
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     onKeyDown={handleKeyDown}
+                    onPaste={handlePaste}
                     rows={1}
-                    placeholder={currentMode === ExamMode.XING_CE ? "来道真题或输入题目..." : "输入申论主题或面试问题..."}
+                    placeholder={
+                      currentMode === ExamMode.XING_CE 
+                        ? "来道真题或输入题目..." 
+                        : currentMode === ExamMode.SHEN_LUN 
+                          ? "输入申论主题..." 
+                          : "输入面试问题..."
+                    }
                     className="w-full bg-transparent border-none focus:ring-0 resize-none py-4 pl-4 pr-12 text-[16px] outline-none text-stone-800 placeholder:text-stone-400 leading-6 max-h-[200px]"
                     style={{ minHeight: '56px' }}
                 />
