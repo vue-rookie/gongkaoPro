@@ -187,7 +187,7 @@ const ChatInterface: React.FC<Props> = ({
                  <div className="w-16 h-16 rounded-2xl bg-stone-100 flex items-center justify-center mb-6">
                     <Sparkles size={28} className="text-stone-400" />
                  </div>
-                 <h3 className="text-xl font-serif font-bold text-stone-800 mb-2">有编</h3>
+                 <h3 className="text-xl font-serif font-bold text-stone-800 mb-2">上岸吧</h3>
                  <p className="text-stone-500 max-w-sm mb-10 leading-relaxed text-sm">
                     您的全能备考助手。<br/>
                     精通{currentMode === 'XING_CE' ? '行测逻辑与数学' : currentMode === 'SHEN_LUN' ? '申论写作与政策' : '面试技巧与模拟'}，随时为您解答。

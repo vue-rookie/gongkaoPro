@@ -175,7 +175,7 @@ const AuthModal: React.FC<Props> = ({ isOpen, onClose, onLogin, onRegister, show
              <div className="bg-stone-200 w-10 h-10 rounded-xl flex items-center justify-center mb-4">
                 <GraduationCap size={24} className="text-stone-600" />
              </div>
-             <h3 className="font-bold text-xl leading-tight font-serif">有编<br/><span className="text-stone-400 text-sm font-normal font-sans">GongKao Pro</span></h3>
+             <h3 className="font-bold text-xl leading-tight font-serif">上岸吧<br/><span className="text-stone-400 text-sm font-normal font-sans">GongKao Pro</span></h3>
           </div>
           <div className="z-10 text-xs text-stone-500 leading-relaxed font-serif">
              {viewMode === 'login' && "登录以同步您的学习进度、错题本和模拟考记录。"}

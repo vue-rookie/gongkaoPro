@@ -66,7 +66,7 @@ const Header: React.FC<Props> = ({
             <div className="text-stone-700 hidden md:block">
                 <GraduationCap size={20} />
             </div>
-            <h1 className="text-lg font-serif font-bold text-stone-800 leading-none tracking-tight">有编</h1>
+            <h1 className="text-lg font-serif font-bold text-stone-800 leading-none tracking-tight">上岸吧</h1>
           </div>
         </div>
 
